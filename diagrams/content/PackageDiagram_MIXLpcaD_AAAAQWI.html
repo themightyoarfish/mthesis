@@ -1,0 +1,858 @@
+<html>
+<head>
+	<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<link rel="stylesheet" href="report.css" type="text/css"/>
+	<title>Package Diagram - Ikkuna Components</title>
+	<META name="Description" content="This diagram contains a visual definition of all packages comprised by ikkuna"/>
+	<script type="text/javascript" src="report.js"></script>
+	<script type="text/javascript" src="link_popup.js"></script>
+	<script type="text/javascript" src="tooltip.js"></script>
+</head>
+<body style="margin-left: 10px; margin-right: 10px; margin-top: 10px; margin-bottom: 10px;" onload="initPage();initDiagram();initGridDiagram();">
+	<div style="position:absolute; z-index:2; visibility:hidden;border-top: 2px #FF0000 solid;" id="spotlight_top">
+	</div>
+	<div style="position:absolute; z-index:2; visibility:hidden;border-top: 2px #FF0000 solid;" id="spotlight_bottom">
+	</div>
+	<div style="position:absolute; z-index:2; visibility:hidden;border-left: 2px #FF0000 solid;" id="spotlight_left">
+	</div>
+	<div style="position:absolute; z-index:2; visibility:hidden;border-left: 2px #FF0000 solid;" id="spotlight_right">
+	</div>
+	<canvas width="100" style="position:absolute; z-index:2; visibility:hidden" id="spotlight_c" height="100">
+	</canvas>
+	<div style="position:absolute; width:100px; height:100px; z-index:1; visibility:hidden" id="spotLightResourcesTop">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr>
+				<td>
+<a href="#top"><img style="border:none" src="../images/icons/BackToTop.gif" alt="Back to top"/></a>				</td>
+				<td>
+<a href="javascript:clearSpotLightFromOpenSpecButton();"><img style="border:none" src="../images/icons/OpenSpecification.gif" alt="Open specification"/></a>				</td>
+			</tr>
+		</table>
+	</div>
+	<div style="position:absolute; width:100px; height:100px; z-index:1; visibility:hidden" id="spotLightResourcesRight">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr>
+				<td>
+<a href="#top"><img style="border:none" src="../images/icons/BackToTop.gif" alt="Back to top"/></a>				</td>
+			</tr>
+			<tr>
+				<td>
+<a href="javascript:clearSpotLightFromOpenSpecButton();"><img style="border:none" src="../images/icons/OpenSpecification.gif" alt="Open specification"/></a>				</td>
+			</tr>
+		</table>
+	</div>
+	<div style="position:absolute;z-index:4;visibility:hidden" id="linkPopupMenuLayer">
+		<table border="0" width="100%" style="border-style:solid; border-width:1px; border-color:#000000; background:#FFFFFF; width:250px" id="linkPopupMenuTable">
+		</table>
+	</div>
+	<div style="position:absolute; z-index:1; visibility:hidden; " id="referenceIconLayer">
+		<table border="0" cellpadding="3" cellspacing="0" style="font-size:1;">
+			<tr>
+				<td>
+					<img src="../images/icons/Ref.gif" style="border:none" onclick="movePopupPositionToReferenceIconPosition();resetPopupForReference();switchPopupShowHideStatus();" />				</td>
+			</tr>
+		</table>
+	</div>
+	<div style="position:absolute; z-index:1; visibility:hidden; " id="subdiagramIconLayer">
+		<table border="0" cellpadding="3" cellspacing="0" style="font-size:1;">
+			<tr>
+				<td>
+					<img src="../images/icons/Subdiagram.gif" style="border:none" onclick="movePopupPositionToSubdiagramIconPosition();resetPopupForSubdiagram();switchPopupShowHideStatus();" />				</td>
+			</tr>
+		</table>
+	</div>
+	<div style="position:absolute; z-index:1; visibility:hidden; " id="transitorIconLayer">
+		<table border="0" cellpadding="3" cellspacing="0" style="font-size:1;">
+			<tr>
+				<td>
+					<img src="../images/icons/Transitor.gif" style="border:none" onclick="movePopupPositionToTransitorIconPosition();resetPopupForTransitor();switchPopupShowHideStatus();" />				</td>
+			</tr>
+		</table>
+	</div>
+	<div style="position:absolute; z-index:1; visibility:hidden; " id="documentationIconLayer">
+		<table border="0" cellpadding="3" cellspacing="0" style="font-size:1;">
+			<tr>
+				<td>
+					<img src="../images/icons/Documentation.png" style="border:none" />				</td>
+			</tr>
+		</table>
+	</div>
+	<div class="HeaderText">
+		ikkuna	</div>
+	<table border="0" cellpadding="0" width="100%" cellspacing="0">
+		<tr>
+			<td class="HeaderLine1">
+			</td>
+		</tr>
+		<tr>
+			<td class="HeaderLine2">
+			</td>
+		</tr>
+		<tr>
+			<td class="HeaderLine3">
+			</td>
+		</tr>
+	</table>
+	<div style="position:absolute; z-index:21; visibility:hidden" id="referencedBys">
+		<table border="0" width="100%" style="border-style:solid; border-width:1px; border-color:#000000; background:#FFFFFF; width:250px" id="referencedBysTable">
+		</table>
+	</div>
+	<div style="position:absolute; z-index:21; visibility:hidden" id="vplink">
+		<table border="1" cellpadding="0" cellspacing="0" bordercolor="#A9BFD3">
+			<tr>
+				<td>
+					<table border="0" cellpadding="0" width="100%" cellspacing="0">
+						<tr style="background:#DDDDDD">
+							<td style="font-size: 12px;" align="left">
+								<select onchange="vpLinkToggleName()" id="vplink-linkType">
+	<option value="Project Link">Project Link</option>
+	<option value="Page URL">Page URL</option>
+</select>
+							</td>
+							<td style="font-size: 12px;" align="right">
+								<input onclick="javascript: vpLinkToggleName()" id="vplink-checkbox" type="checkbox" />
+								<label for="vplink-checkbox">with Name</label>							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<textarea id="vplink-text" style="width: 348px; height: 60px; border-color: #7EADD9; outline: none;"></textarea>				</td>
+			</tr>
+		</table>
+	</div>
+	<p>
+<a href="Package_MlPLpcaD_AAAAQWT.html" class="PageParentTitle">ikkuna : Package</a>	</p>
+	<p class="PageTitle">
+		<span id="PageTitleText">
+			Package Diagram - Ikkuna Components		</span>
+<a onclick="javascript: showVpLink('ikkuna.vpp://diagram/MIXLpcaD.AAAAQWI', 'Ikkuna Components\nikkuna.vpp://diagram/MIXLpcaD.AAAAQWI', 'Ikkuna Components', this); return false;" style="padding-left: 16px; font-size: 12px" href="#"><img src="../images/icons/link.png" border="0"> link</a>	</p>
+	<div style="position: relative; padding-bottom: 20px;">
+		<table border="0" cellpadding="0" width="100%" cellspacing="0" style="position: absolute; top: 0; left: 0; z-index: 20;" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),hideLinkPopup(),hideReferencedBys();">
+			<tr>
+				<td>
+<span class="TableContent">Jump to:</span>					<select id="SelectShape" class="TableContent" onChange="scrollWin('diagram', this.value);hideLinkPopup();showSpotLight('diagram', this.value)">
+<option value="">Please select a model element</option>
+<option value="shape|12.0|237.0|196.0|125.0|NOTE_WaHNZcaD_AAAAQol.html|NOTE_WaHNZcaD_AAAAQol.html|maHNZcaD.AAAAQok" id="optionmaHNZcaD.AAAAQok">Unnamed Note : Note</option>
+<option value="shape|385.0|612.0|132.0|63.0|NOTE_2u9NZcaD_AAAAQoI.html|NOTE_2u9NZcaD_AAAAQoI.html|2u9NZcaD.AAAAQoH" id="option2u9NZcaD.AAAAQoH">Unnamed Note : Note</option>
+<option value="shape|342.0|562.0|210.0|140.0|Package_3SkEZcaD_AAAAQms.html|Package_3SkEZcaD_AAAAQms.html|XSkEZcaD.AAAAQmr" id="optionXSkEZcaD.AAAAQmr">visualization : Package</option>
+<option value="shape|152.0|402.0|120.0|70.0|NOTE_IRW4ZcaD_AAAAQkr.html|NOTE_IRW4ZcaD_AAAAQkr.html|IRW4ZcaD.AAAAQkq" id="optionIRW4ZcaD.AAAAQkq">Unnamed Note : Note</option>
+<option value="shape|332.0|82.0|370.0|430.0|Package_8X_YZcaD_AAAAQfa.html|Package_8X_YZcaD_AAAAQfa.html|8X_YZcaD.AAAAQfZ" id="option8X_YZcaD.AAAAQfZ">introspection : Package</option>
+<option value="shape|42.0|582.0|160.0|100.0|NOTE_4_2oZcaD_AAAAQdS.html|NOTE_4_2oZcaD_AAAAQdS.html|4_2oZcaD.AAAAQdR" id="option4_2oZcaD.AAAAQdR">serialize package usage : Note</option>
+<option value="shape|362.0|2.0|190.0|70.0|NOTE_R9bIZcaD_AAAAQc5.html|NOTE_R9bIZcaD_AAAAQc5.html|B9bIZcaD.AAAAQc4" id="optionB9bIZcaD.AAAAQc4">export package usage : Note</option>
+<option value="shape|12.0|552.0|201.0|151.0|Package_fixAZcaD_AAAAQjL.html|Package_fixAZcaD_AAAAQjL.html|fixAZcaD.AAAAQjK" id="optionfixAZcaD.AAAAQjK">serialize : Package</option>
+<option value="shape|152.0|72.0|92.0|80.0|Package_6oxfpcaD_AAAAQgD.html|Package_6oxfpcaD_AAAAQgD.html|6oxfpcaD.AAAAQgC" id="option6oxfpcaD.AAAAQgC">pytorch : Package</option>
+<option value="shape|22.0|72.0|92.0|80.0|Package_hJ8fpcaD_AAAAQfe.html|Package_hJ8fpcaD_AAAAQfe.html|hJ8fpcaD.AAAAQfd" id="optionhJ8fpcaD.AAAAQfd">tensorflow : Package</option>
+<option value="shape|2.0|202.0|260.0|170.0|Package_OD6XpcaD_AAAAQZI.html|Package_OD6XpcaD_AAAAQZI.html|OD6XpcaD.AAAAQZH" id="optionOD6XpcaD.AAAAQZH">definitions : Package</option>
+<option value="shape|12.0|2.0|270.0|160.0|Package_9D9rpcaD_AAAAQWc.html|Package_9D9rpcaD_AAAAQWc.html|lD9rpcaD.AAAAQWb" id="optionlD9rpcaD.AAAAQWb">export : Package</option>
+<option value="shape|732.0|452.0|140.0|110.0|Package_tNN_ZcaD_AAAAQgY.html|Package_tNN_ZcaD_AAAAQgY.html|tNN_ZcaD.AAAAQgX" id="optiontNN_ZcaD.AAAAQgX">Js : Package</option>
+<option value="shape|742.0|492.0|120.0|60.0|NOTE_6td_ZcaD_AAAAQgn.html|NOTE_6td_ZcaD_AAAAQgn.html|atd_ZcaD.AAAAQgm" id="optionatd_ZcaD.AAAAQgm">Unnamed Note : Note</option>
+<option value="shape|712.0|22.0|400.0|305.0|Package_fiA05caD_AAAAQkT.html|Package_fiA05caD_AAAAQkT.html|viA05caD.AAAAQkS" id="optionviA05caD.AAAAQkS">Config : Package</option>
+<option value="shape|752.0|102.0|350.0|150.0|NOTE_thQ05caD_AAAAQkc.html|NOTE_thQ05caD_AAAAQkc.html|NhQ05caD.AAAAQkb" id="optionNhQ05caD.AAAAQkb">Unnamed Note : Note</option>
+<option value="shape|352.0|312.0|210.0|110.0|Package_p99c5caD_AAAAQnB.html|Package_p99c5caD_AAAAQnB.html|p99c5caD.AAAAQnA" id="optionp99c5caD.AAAAQnA">watchdog : Package</option>
+<option value="shape|362.0|342.0|110.0|70.0|NOTE_6Ljc5caD_AAAAQnS.html|NOTE_6Ljc5caD_AAAAQnS.html|6Ljc5caD.AAAAQnR" id="option6Ljc5caD.AAAAQnR">Unnamed Note : Note</option>
+<option value="shape|502.0|292.0|140.0|100.0|Package_Bwfc5caD_AAAAQn3.html|Package_Bwfc5caD_AAAAQn3.html|.wfc5caD.AAAAQn2" id="option.wfc5caD.AAAAQn2">Package : Package</option>
+</select>				</td>
+			</tr>
+		</table>
+		<table border="0" cellpadding="0" width="100%" cellspacing="0" style="position: relative; top: 24;">
+			<tr>
+				<td>
+					<img id="diagram" src="../images/Ikkuna_Components.png" usemap="#diagram_map" class="Image" width="1116" height="707"/>
+					<map name="diagram_map">
+<area imageId="diagram" coords="282.0, 25.0, 282.0, 39.0, 362.0, 39.0, 362.0, 25.0" coords2="282.0, 25.0, 282.0, 39.0, 362.0, 39.0, 362.0, 25.0" shape="poly" alt=":Anchor" id="areadiagram_map_SQRoZcaD.AAAAQd9_default" href="Anchor_UQRoZcaD_AAAAQd8.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" coords="262.0, 395.0, 262.0, 402.0, 272.0, 402.0, 272.0, 409.0, 332.0, 409.0, 332.0, 395.0" coords2="262.0, 395.0, 262.0, 402.0, 272.0, 402.0, 272.0, 409.0, 332.0, 409.0, 332.0, 395.0" shape="poly" alt=":Anchor" id="areadiagram_map_5oR4ZcaD.AAAAQk6_default" href="Anchor_OoR4ZcaD_AAAAQk5.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" coords="502, 292, 642, 392" coords2="502, 292, 642, 392" shape="rect" alt="Package:Package" id="areadiagram_map_.wfc5caD.AAAAQn2_default" href="Package_Bwfc5caD_AAAAQn3.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Heuristics for actionable feedback from metrics
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="362, 342, 472, 412" coords2="362, 342, 472, 412" shape="rect" alt="Heuristics for actionable feedback from metrics:Note" id="areadiagram_map_6Ljc5caD.AAAAQnR_default" href="NOTE_6Ljc5caD_AAAAQnS.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" coords="352, 312, 562, 422" coords2="352, 312, 562, 422" shape="rect" alt="watchdog:Package" id="areadiagram_map_p99c5caD.AAAAQnA_default" href="Package_p99c5caD_AAAAQnB.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Contains classes for configuring the framework behavior
+    &amp;lt;/p&amp;gt;
+    &amp;lt;ul class=&amp;quot;disc&amp;quot; margin-left-ltr=&amp;quot;50&amp;quot; margin-right-rtl=&amp;quot;50&amp;quot; style=&amp;quot;list-style-type:none;margin-bottom:0px;margin-left:40pt;margin-top:0px;&amp;quot;&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        kind of things to save
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        which metrics to compute
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        which visualizations to plot
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        backend (if there was alternative to tensorboard)
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        &amp;#8230;
+      &amp;lt;/li&amp;gt;
+    &amp;lt;/ul&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;&amp;quot;&amp;gt;
+      The config is passed to all parts of the system.&amp;nbsp;
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="752, 102, 1102, 252" coords2="752, 102, 1102, 252" shape="rect" alt="Contains classes for configuring the framework behavior
+kind of things to save
+which metrics to compute
+which visualizations to plot
+backend (if there was alternative to tensorboard)
+…
+The config is passed to all parts of the system. :Note" id="areadiagram_map_NhQ05caD.AAAAQkb_default" href="NOTE_thQ05caD_AAAAQkc.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" coords="712, 22, 1112, 327" coords2="712, 22, 1112, 327" shape="rect" alt="Config:Package" id="areadiagram_map_viA05caD.AAAAQkS_default" href="Package_fiA05caD_AAAAQkT.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Javascript code for plotting data
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="742, 492, 862, 552" coords2="742, 492, 862, 552" shape="rect" alt="Javascript code for plotting data:Note" id="areadiagram_map_atd_ZcaD.AAAAQgm_default" href="NOTE_6td_ZcaD_AAAAQgn.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" coords="732, 452, 872, 562" coords2="732, 452, 872, 562" shape="rect" alt="Js:Package" id="areadiagram_map_tNN_ZcaD.AAAAQgX_default" href="Package_tNN_ZcaD_AAAAQgY.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon()" onmousedown="clearSpotLight();"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Interface definition for data to export during training (weights, 
+      activations, etc). This is the API against which all metrics are written.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="12, 237, 208, 362" coords2="12, 237, 208, 362" shape="rect" alt="Interface definition for data to export during training (weights, activations, etc). This is the API against which all metrics are written.:Note" id="areadiagram_map_maHNZcaD.AAAAQok_default" href="NOTE_WaHNZcaD_AAAAQol.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Backend python code for tensorboard plugins
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="385, 612, 517, 675" coords2="385, 612, 517, 675" shape="rect" alt="Backend python code for tensorboard plugins:Note" id="areadiagram_map_2u9NZcaD.AAAAQoH_default" href="NOTE_2u9NZcaD_AAAAQoI.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      This package contains the backend (python) portions for the tensorboard 
+      visualizations.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="342, 562, 552, 702" coords2="342, 562, 552, 702" shape="rect" alt="visualization:Package" id="areadiagram_map_XSkEZcaD.AAAAQmr_default" href="Package_3SkEZcaD_AAAAQms.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Distill live data into meaningful metrics.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="152, 402, 272, 472" coords2="152, 402, 272, 472" shape="rect" alt="Distill live data into meaningful metrics.:Note" id="areadiagram_map_IRW4ZcaD.AAAAQkq_default" href="NOTE_IRW4ZcaD_AAAAQkr.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Plugin framework for consuming the data in the formats defined by the 
+      definitions package. Arbitrary metrics can then be computed from the 
+      live data and passed to the serialize package for writing to disk.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="332, 82, 702, 512" coords2="332, 82, 702, 512" shape="rect" alt="introspection:Package" id="areadiagram_map_8X_YZcaD.AAAAQfZ_default" href="Package_8X_YZcaD_AAAAQfa.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    Receive the distilled metrics and use global writer to serialize them. 
+    Switch according to which framework is used
+  &amp;lt;/body&amp;gt;" coords="42, 582, 202, 682" coords2="42, 582, 202, 682" shape="rect" alt="Receive the distilled metrics and use global writer to serialize them. Switch according to which framework is used:Note" id="areadiagram_map_4_2oZcaD.AAAAQdR_default" href="NOTE_4_2oZcaD_AAAAQdS.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Use either of the subpackages to create definitions and register them 
+      for introspection.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="362, 2, 552, 72" coords2="362, 2, 552, 72" shape="rect" alt="Use either of the subpackages to create definitions and register them for introspection.:Note" id="areadiagram_map_B9bIZcaD.AAAAQc4_default" href="NOTE_R9bIZcaD_AAAAQc5.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Use the data exported in formats defined in the definitions package to 
+      add summary variables (tf.summary or tensorboardX.summary) for 
+      serialization.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="12, 552, 213, 703" coords2="12, 552, 213, 703" shape="rect" alt="serialize:Package" id="areadiagram_map_fixAZcaD.AAAAQjK_default" href="Package_fixAZcaD_AAAAQjL.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Contains everything needed to extract data from pytorch models
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="152, 72, 244, 152" coords2="152, 72, 244, 152" shape="rect" alt="pytorch:Package" id="areadiagram_map_6oxfpcaD.AAAAQgC_default" href="Package_6oxfpcaD_AAAAQgD.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Contains everything to work with tensorflow graphs
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="22, 72, 114, 152" coords2="22, 72, 114, 152" shape="rect" alt="tensorflow:Package" id="areadiagram_map_hJ8fpcaD.AAAAQfd_default" href="Package_hJ8fpcaD_AAAAQfe.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      This package contains base classes for metadata, weights, activations, 
+      gradients and other stuff so that key-value maps can be exported from 
+      the model which are more easily serialized and worked with.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="2, 202, 262, 372" coords2="2, 202, 262, 372" shape="rect" alt="definitions:Package" id="areadiagram_map_OD6XpcaD.AAAAQZH_default" href="Package_OD6XpcaD_AAAAQZI.html" onmouseover="storeReferenceAndSubdiagramInfos('diagram','2, 202, 262, 372',new Array(),new Array(),new Array(),new Array(),new Array(),new Array('ClassDiagram_84egZcaD_AAAAQkA.html/definitions Class Diagram/ClassDiagram'),new Array(),new Array(),new Array()),hideReferenceIcon(),showSubdiagramIcon('diagram', '2, 202, 262, 372'),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+<area imageId="diagram" docContent="&amp;lt;head&amp;gt;
+    
+  &amp;lt;/head&amp;gt;
+  &amp;lt;body style=&amp;quot;margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;&amp;quot;&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      Package used by model definition code to inform &amp;lt;font face=&amp;quot;Andale Mono&amp;quot;&amp;gt;ikkuna 
+      &amp;lt;/font&amp;gt;of all the things that need to be exported to visualization 
+      clients, such as
+    &amp;lt;/p&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;&amp;quot;&amp;gt;
+      &amp;nbsp;
+    &amp;lt;/p&amp;gt;
+    &amp;lt;ul class=&amp;quot;disc&amp;quot; margin-left-ltr=&amp;quot;50&amp;quot; margin-right-rtl=&amp;quot;50&amp;quot; style=&amp;quot;list-style-type:none;margin-bottom:0px;margin-left:40pt;margin-top:0px;&amp;quot;&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        graph structure, layer names, sizes, ops
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        unit activations
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        unit gradients
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        unit weights
+      &amp;lt;/li&amp;gt;
+      &amp;lt;li style=&amp;quot;margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;&amp;quot;&amp;gt;
+        model predictions
+      &amp;lt;/li&amp;gt;
+    &amp;lt;/ul&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;&amp;quot;&amp;gt;
+      &amp;nbsp;
+    &amp;lt;/p&amp;gt;
+    &amp;lt;p style=&amp;quot;margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;&amp;quot;&amp;gt;
+      Appropriate asynchronous callbacks into the &amp;lt;font face=&amp;quot;Andale Mono&amp;quot;&amp;gt;introspection&amp;lt;/font&amp;gt; 
+      package will be added to the graph execution.
+    &amp;lt;/p&amp;gt;
+  &amp;lt;/body&amp;gt;" coords="12, 2, 282, 162" coords2="12, 2, 282, 162" shape="rect" alt="export:Package" id="areadiagram_map_lD9rpcaD.AAAAQWb_default" href="Package_9D9rpcaD_AAAAQWc.html" onmouseover="hideReferenceIcon(),hideSubdiagramIcon(),hideTransitorIcon(),showTooltip(this)" onmousedown="clearSpotLight();" onmouseout="hideTooltip()"/>
+</map>
+				</td>
+			</tr>
+		</table>
+		<p>
+		</p>
+	</div>
+	<p>
+		<table border="0" cellpadding="0" width="100%" cellspacing="0">
+			<tr>
+				<td>
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      This diagram contains a visual definition of all packages comprised by <font face="Andale Mono">ikkuna</font>
+    </p>
+  </body></span>				</td>
+			</tr>
+		</table>
+	</p>
+	<table border="0" cellpadding="0" width="100%" cellspacing="0">
+		<tr>
+			<td class="Category">
+				Model Elements			</td>
+		</tr>
+		<tr>
+			<td style="height: 5px">
+			</td>
+		</tr>
+	</table>
+	<table border="0" cellpadding="0" width="100%" cellspacing="0">
+		<tr>
+			<td colSpan="4" class="TableHeaderLine">
+			</td>
+		</tr>
+		<tr>
+			<td colSpan="4" class="TableHeaderLine1">
+			</td>
+		</tr>
+		<tr class="TableHeader">
+			<td class="TableCellSpaceHolder10Px">
+			</td>
+			<td width="30%">
+<span class="TableHeaderText">Name</span>			</td>
+			<td class="TableCellSpaceHolder20Px">
+			</td>
+			<td>
+<span class="TableHeaderText">Description</span>			</td>
+		</tr>
+		<tr>
+			<td colSpan="4" class="TableHeaderLine2">
+			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_WaHNZcaD_AAAAQol.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Interface definition for data to export during training (weights, 
+      activations, etc). This is the API against which all metrics are written.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_2u9NZcaD_AAAAQoI.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Backend python code for tensorboard plugins
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_3SkEZcaD_AAAAQms.html" class="ItemLink">visualization : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      This package contains the backend (python) portions for the tensorboard 
+      visualizations.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_IRW4ZcaD_AAAAQkr.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Distill live data into meaningful metrics.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_8X_YZcaD_AAAAQfa.html" class="ItemLink">introspection : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Plugin framework for consuming the data in the formats defined by the 
+      definitions package. Arbitrary metrics can then be computed from the 
+      live data and passed to the serialize package for writing to disk.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_4_2oZcaD_AAAAQdS.html" class="ItemLink">serialize package usage : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    Receive the distilled metrics and use global writer to serialize them. 
+    Switch according to which framework is used
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_R9bIZcaD_AAAAQc5.html" class="ItemLink">export package usage : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Use either of the subpackages to create definitions and register them 
+      for introspection.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_fixAZcaD_AAAAQjL.html" class="ItemLink">serialize : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Use the data exported in formats defined in the definitions package to 
+      add summary variables (tf.summary or tensorboardX.summary) for 
+      serialization.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_6oxfpcaD_AAAAQgD.html" class="ItemLink">pytorch : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Contains everything needed to extract data from pytorch models
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_hJ8fpcaD_AAAAQfe.html" class="ItemLink">tensorflow : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Contains everything to work with tensorflow graphs
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_OD6XpcaD_AAAAQZI.html" class="ItemLink">definitions : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      This package contains base classes for metadata, weights, activations, 
+      gradients and other stuff so that key-value maps can be exported from 
+      the model which are more easily serialized and worked with.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_9D9rpcaD_AAAAQWc.html" class="ItemLink">export : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Package used by model definition code to inform <font face="Andale Mono">ikkuna 
+      </font>of all the things that need to be exported to visualization 
+      clients, such as
+    </p>
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      &nbsp;
+    </p>
+    <ul class="disc" margin-left-ltr="50" margin-right-rtl="50" style="list-style-type:none;margin-bottom:0px;margin-left:40pt;margin-top:0px;">
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        graph structure, layer names, sizes, ops
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        unit activations
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        unit gradients
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        unit weights
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        model predictions
+      </li>
+    </ul>
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;">
+      &nbsp;
+    </p>
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;">
+      Appropriate asynchronous callbacks into the <font face="Andale Mono">introspection</font> 
+      package will be added to the graph execution.
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_tNN_ZcaD_AAAAQgY.html" class="ItemLink">Js : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_6td_ZcaD_AAAAQgn.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Javascript code for plotting data
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_fiA05caD_AAAAQkT.html" class="ItemLink">Config : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_thQ05caD_AAAAQkc.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Contains classes for configuring the framework behavior
+    </p>
+    <ul class="disc" margin-left-ltr="50" margin-right-rtl="50" style="list-style-type:none;margin-bottom:0px;margin-left:40pt;margin-top:0px;">
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        kind of things to save
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        which metrics to compute
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        which visualizations to plot
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        backend (if there was alternative to tensorboard)
+      </li>
+      <li style="margin-right:0;margin-bottom:0;margin-left:0;margin-top:0;">
+        &#8230;
+      </li>
+    </ul>
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0;">
+      The config is passed to all parts of the system.&nbsp;
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_p99c5caD_AAAAQnB.html" class="ItemLink">watchdog : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"></span>			</td>
+		</tr>
+		<tr class="TableRow2">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Note.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Note.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="NOTE_6Ljc5caD_AAAAQnS.html" class="ItemLink">N/A : Note</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"><head>
+    
+  </head>
+  <body style="margin-right:0;color:#000000;font-weight:normal;margin-left:0;font-size:12px;font-family:Dialog;">
+    <p style="margin-right:0pt;margin-bottom:.0001pt;margin-left:0pt;margin-top:0pt;">
+      Heuristics for actionable feedback from metrics
+    </p>
+  </body></span>			</td>
+		</tr>
+		<tr class="TableRow1">
+			<td>
+			</td>
+			<td>
+				<span class="TableContent">
+					<div style="float: left; width: 18px !important;height: 18px !important;background-image:url(../images/icons/Package.png) !important; background-image:url(''); filter:progid:DXImageTransform.Microsoft.AlphaImageLoader(src='../images/icons/Package.png'); background-repeat: no-repeat;">
+					</div>
+					&nbsp; <a href="Package_Bwfc5caD_AAAAQn3.html" class="ItemLink">Package : Package</a>				</span>
+			</td>
+			<td>
+			</td>
+			<td style="padding: 5px 0">
+<span class="TableContent Documentation"></span>			</td>
+		</tr>
+	</table>
+	<table border="0" cellpadding="0" width="100%" cellspacing="0">
+		<tr>
+			<td class="TableCellSpaceHolder1PxTall">
+			</td>
+		</tr>
+		<tr>
+			<td class="TableFooter">
+			</td>
+		</tr>
+	</table>
+	<div style="height: 20px">
+	</div>
+	<table border="0" cellpadding="0" width="100%" cellspacing="0">
+		<tr>
+			<td class="FooterLine">
+			</td>
+		</tr>
+	</table>
+	<div class="HeaderText">
+		ikkuna	</div>
+</body>
+</html>
