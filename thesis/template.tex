@@ -1,0 +1,87 @@
+\documentclass[
+   twoside,
+   numbers=noenddot,
+   headinclude,
+   footinclude=false, % no footer
+   paper=a4,
+   11pt,
+]{report}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage{longtable,booktabs}
+\usepackage{graphicx}
+\usepackage{geometry}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\PassOptionsToPackage{unicode=true}{hyperref}
+\usepackage{hyperref}
+\hypersetup{breaklinks=true,
+            bookmarks=true,
+            pdfauthor={$author$},
+            pdftitle={$title$},
+            colorlinks=true,
+            citecolor=$if(citecolor)$$citecolor$$else$blue$endif$,
+            urlcolor=$if(urlcolor)$$urlcolor$$else$blue$endif$,
+            linkcolor=$if(linkcolor)$$linkcolor$$else$magenta$endif$}
+
+
+\input{classicthesis-config}
+
+$if(title)$
+\title{$title$}
+$endif$
+$if(subtitle)$
+\subtitle{$subtitle$}
+$endif$
+$if(author)$
+\author{$for(author)$$author$$sep$ \and $endfor$}
+$endif$
+$if(date)$
+\date{$date$}
+$endif$
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+\begin{document}
+\setcounter{section}{1}
+$if(title)$
+{
+    \newgeometry{left=1cm, right=1cm}
+    \centering
+    \maketitle
+    \restoregeometry
+}
+$endif$
+$if(abstract)$
+\begin{abstract}
+$abstract$
+\end{abstract}
+$endif$
+
+$for(include-before)$
+$include-before$
+
+$endfor$
+
+\tableofcontents
+
+\clearpage
+$body$
+
+\end{document}
