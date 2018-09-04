@@ -20,6 +20,9 @@ tex: $(OUT).tex
 # shortcut for pdf creation
 pdf: $(OUT).pdf
 
+open: $(OUT).pdf
+	open $<
+
 .PHONY: clean
 
 clean:
