@@ -1,10 +1,10 @@
 \documentclass[
-   twoside,
-   numbers=noenddot,
-   headinclude,
-   footinclude=false, % no footer
-   paper=a4,
-   11pt,
+    twoside,
+    numbers=noenddot,
+    headinclude,
+    footinclude=false, % no footer
+    paper=a4,
+    11pt,
 ]{report}
 \usepackage{lmodern}
 \usepackage{amssymb,amsmath}
@@ -16,9 +16,15 @@
 \usepackage{longtable,booktabs}
 \usepackage{graphicx}
 \usepackage{geometry}
+\usepackage{placeins}
+\usepackage{setspace}
+\usepackage{array}
+
+\renewcommand{\bibname}{References}
 
 \providecommand{\tightlist}{%
-  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+}
 
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -31,57 +37,156 @@
 \PassOptionsToPackage{unicode=true}{hyperref}
 \usepackage{hyperref}
 \hypersetup{breaklinks=true,
-            bookmarks=true,
-            pdfauthor={$author$},
-            pdftitle={$title$},
-            colorlinks=true,
-            citecolor=$if(citecolor)$$citecolor$$else$blue$endif$,
-            urlcolor=$if(urlcolor)$$urlcolor$$else$blue$endif$,
-            linkcolor=$if(linkcolor)$$linkcolor$$else$magenta$endif$}
+    bookmarks=true,
+    pdfauthor={$author$},
+    pdftitle={$title$},
+    colorlinks=true,
+    citecolor=$if(citecolor)$$citecolor$$else$blue$endif$,
+    urlcolor=$if(urlcolor)$$urlcolor$$else$blue$endif$,
+linkcolor=$if(linkcolor)$$linkcolor$$else$magenta$endif$}
+
+% must be loaded after hyperref
+% this is for using pandoc-crossref with cref: True
+\usepackage[noabbrev, nameinlink]{cleveref}
 
 
 \input{classicthesis-config}
 
+$if(natbib)$
+\usepackage[$natbiboptions$]{natbib}
+\bibliographystyle{$if(biblio-style)$$biblio-style$$else$plainnat$endif$}
+$endif$
+$if(biblatex)$
+\usepackage[$if(biblio-style)$style=$biblio-style$,$endif$$for(biblatexoptions)$$biblatexoptions$$sep$,$endfor$]{biblatex}
+$for(bibliography)$
+\addbibresource{$bibliography$}
+$endfor$
+$endif$
+
 $if(title)$
-\title{$title$}
+\title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
 $endif$
 $if(subtitle)$
+\providecommand{\subtitle}[1]{}
 \subtitle{$subtitle$}
 $endif$
 $if(author)$
 \author{$for(author)$$author$$sep$ \and $endfor$}
 $endif$
-$if(date)$
-\date{$date$}
+$if(institute)$
+\providecommand{\institute}[1]{}
+\institute{$for(institute)$$institute$$sep$ \and $endfor$}
 $endif$
-$for(header-includes)$
-$header-includes$
-$endfor$
+\date{$date$}
 
+% \usepackage[a4paper,includeall,bindingoffset=0cm,margin=2cm,
+% marginparsep=0cm,marginparwidth=0cm]{geometry}
 \begin{document}
-\setcounter{section}{1}
-$if(title)$
-{
-    \newgeometry{left=1cm, right=1cm}
-    \centering
-    \maketitle
+{\newgeometry{marginparsep=0cm,marginparwidth=0cm, bindingoffset=0cm, margin=2cm}
+    \begin{titlepage}
+        \thispagestyle{empty}
+        \vspace*{1cm}
+
+        \begin{center}
+
+            \Large
+
+            \includegraphics[width=\textwidth, height=2cm]{gfx/uni.pdf}
+
+            \vspace{2cm}
+
+            Department of Computer Science
+
+            Department of Cognitive Science
+
+            \vspace{2cm}
+
+            {
+                \LARGE
+                $author$
+            }
+
+            \vspace{2cm}
+
+            {
+                \Huge \scshape
+                \setstretch{1.2}
+                $title$
+                \par
+            }
+
+            \vspace{2cm}
+
+            {
+                \LARGE \emph{Master's Thesis}
+            }
+
+            \vspace{3cm}
+
+            {
+                \begin{tabular}{>{\bfseries}ll}
+                    First Supervisor: & \myFirstSupervisor\\
+                    Second Supervisor: & \mySecondSupervisor
+                \end{tabular}
+            }
+
+        \end{center}
+    \end{titlepage}
     \restoregeometry
 }
-$endif$
+
 $if(abstract)$
 \begin{abstract}
-$abstract$
+    $abstract$
 \end{abstract}
+$endif$
+$if(zusammenfassung)$
+\begin{otherlanguage}{german}
+    \begin{abstract}
+        $zusammenfassung$
+    \end{abstract}
+\end{otherlanguage}
 $endif$
 
 $for(include-before)$
 $include-before$
 
 $endfor$
-
-\tableofcontents
-
-\clearpage
+$if(toc)$
+{
+    $if(colorlinks)$
+    \hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$$endif$}
+    $endif$
+    \setcounter{tocdepth}{$toc-depth$}
+    \tableofcontents
+}
+$endif$
+$if(lot)$
+\listoftables
+$endif$
+$if(lof)$
+\listoffigures
+$endif$
 $body$
 
+$if(natbib)$
+$if(bibliography)$
+$if(biblio-title)$
+$if(book-class)$
+\renewcommand\bibname{$biblio-title$}
+$else$
+\renewcommand\refname{$biblio-title$}
+$endif$
+$endif$
+\bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+
+$endif$
+$endif$
+$if(biblatex)$
+\printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
+$endif$
+$for(include-after)$
+$include-after$
+
+$endfor$
 \end{document}
