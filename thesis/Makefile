@@ -1,7 +1,7 @@
 TEX_TMEPLATE=template.tex
 OUT=thesis
 IN_FILES=$(shell ls chapters/*)
-PANDOC_ARGS=--top-level-division=chapter
+PANDOC_ARGS=--top-level-division=chapter --filter pandoc-crossref --filter pandoc-citeproc
 
 all: pdf
 	open $(OUT).pdf
@@ -19,6 +19,10 @@ tex: $(OUT).tex
 
 # shortcut for pdf creation
 pdf: $(OUT).pdf
+
+# Generate pdf directly from tex
+texpdf: $(TEX_TMEPLATE) $(IN_FILES)
+	pandoc $(PANDOC_ARGS) --template $(TEX_TMEPLATE) -o $(OUT).pdf $(IN_FILES)
 
 open: $(OUT).pdf
 	open $<
