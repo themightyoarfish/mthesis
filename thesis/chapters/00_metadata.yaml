@@ -2,8 +2,8 @@
 title: Training Introspection for Artificial Neural Networks
 author: Rasmus Diederichsen
 linkcolor: teal
-nameInLink: true    # doesn't seem to do anything
-cref: true          # doesn't seem to do anything
+nameInLink: true
+cref: true
 abstract: |
     Artificial neural networks have become the prevalent model class for many
     machine learning tasks, including image classification, segmentation, video and

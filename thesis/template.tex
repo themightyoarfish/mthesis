@@ -47,7 +47,10 @@ linkcolor=$if(linkcolor)$$linkcolor$$else$magenta$endif$}
 
 % must be loaded after hyperref
 % this is for using pandoc-crossref with cref: True
-\usepackage[noabbrev, nameinlink]{cleveref}
+\PassOptionsToPackage{noabbrev, nameinlink}{cleveref}
+$for(header-includes)$
+$header-includes$
+$endfor$
 
 
 \input{classicthesis-config}
