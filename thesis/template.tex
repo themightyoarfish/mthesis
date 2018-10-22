@@ -19,12 +19,16 @@
 \usepackage{placeins}
 \usepackage{setspace}
 \usepackage{array}
+\usepackage{framed}
+
 
 \renewcommand{\bibname}{References}
 
 \providecommand{\tightlist}{%
 \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
 }
+
+\newcommand{\passthrough}[1]{#1}
 
 \makeatletter
 \def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
@@ -34,17 +38,12 @@
 % margins by default, and it is still possible to overwrite the defaults
 % using explicit options in \includegraphics[width, height, ...]{}
 \setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
-\PassOptionsToPackage{unicode=true}{hyperref}
+\PassOptionsToPackage{unicode=true,hyperfootnotes=false}{hyperref}
 \usepackage{hyperref}
-\hypersetup{breaklinks=true,
-    bookmarks=true,
-    pdfauthor={$author$},
-    pdftitle={$title$},
-    colorlinks=true,
-    citecolor=$if(citecolor)$$citecolor$$else$blue$endif$,
-    urlcolor=$if(urlcolor)$$urlcolor$$else$blue$endif$,
-linkcolor=$if(linkcolor)$$linkcolor$$else$magenta$endif$}
-
+\usepackage[dvipsnames,table,cymk]{xcolor}  % without passing these options, pdflatex complains about an option clash.
+                                            % It says that the package 'was already loaded with options []' and is now being loaded with options
+                                            % dvipsnames,table,cymk, which clearly isn't true. Seems like a bug in the error reporting.'
+                                            % fun times
 % must be loaded after hyperref
 % this is for using pandoc-crossref with cref: True
 \PassOptionsToPackage{noabbrev, nameinlink}{cleveref}
@@ -54,6 +53,21 @@ $endfor$
 
 
 \input{classicthesis-config}
+
+\definecolor{verylightblue}{RGB}{243, 243, 250}
+\definecolor{verydarkblue}{RGB}{37, 65, 103}
+\definecolor{reddish}{RGB}{238, 86, 121}
+\definecolor{yellowish}{RGB}{217, 216, 116}
+\definecolor{mediumlightblue}{RGB}{157, 176, 191}
+\hypersetup{breaklinks=true,
+    bookmarks=true,
+    pdfauthor={$author$},
+    pdftitle={$title$},
+    colorlinks=true,
+    citecolor=verydarkblue,
+    urlcolor=reddish,
+    linkcolor=verydarkblue}
+
 
 $if(natbib)$
 \usepackage[$natbiboptions$]{natbib}

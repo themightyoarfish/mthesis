@@ -39,7 +39,7 @@ representation of a multi-layer feedforward network.
 ![Schema of a multi-layer neural network. $\mathbf{x}_i$ are the input values,
   $a_{l_n,i}$ the $i$-th activation in layer $l_n$
   and $w_{l_n,i,j}$ the weight between the $i$-th unit in layer $l_n$ and the
-  $j$-th unit in layer $l_{n+1}$](../diagrams/neural_net.pdf){#fig:neuralnet}
+  $j$-th unit in layer $l_{n+1}$](diagrams/neural_network/neural_net.pdf){#fig:neuralnet}
 
 ## Goals of this thesis {#sec:thesis-goals}
 
@@ -109,36 +109,44 @@ learning or how to ensure timely convergence. And even with this expertise,
 visualizations or metrics need to be implemented over and over again
 because common tools do not abstract from the concrete model architecture.
 
-There exist a some of monitoring tools (see [@sec:existing-apps]), but they are mostly low-level tools
-which enable visualization of certain network metrics. In contrast, the
-library developed in this work is geared towards modularizing introspection
-metrics in such a way that they are usable for any kind of model. The secondary
-purpose of the library is the enablement to quickly iterate on hypothesized
-metrics extracted from the training in order to diagnose problems such as those
-outlined in [@sec:thesis-goals]
+There exist a some of monitoring tools (see [@sec:existing-apps]), but they are
+mostly low-level tools which provide visualization primitives (drawing and
+interacting with graphs). They may enable visualization of certain network
+metrics on top of the primitives, but There is no native support for a concept
+such as _Maximum singular value of the weight matrix_ which can be simply
+applied automatically to all layers.
 
-Detecting these problems early would cut down on the time needed to train a
-model to satisfaction.
+In contrast, the library developed in this work is geared towards modularizing
+introspection metrics in such a way that they are usable for any kind of model,
+without modifications to the model code.
+The secondary purpose of the library is the enablement to quickly iterate on
+hypothesized metrics extracted from the training in order to diagnose problems
+such as those outlined in [@sec:thesis-goals]
+
+As such, the library shall not only be useful to end users who will make use of
+established metrics and thus save time in their model training, but also to
+researchers and the author of this thesis in for evaluating hypotheses about
+training metrics.
 
 ## Existing Applications {#sec:existing-apps}
 
 ### TensorBoard {.unnumbered}
 
-TensorBoard is a visulization toolkit originally developed for the TensorFlow [@tensorflow2015-whitepaper]
-deep learning framework. It is composed of a Python library for exporting data
-from the training process and a web server which reads the serialized data and
-displays it in the browser. The server can be used independently from
-TensorFlow, provided the data is serialized in the appropriate format. This
-enables, e.g., a PyTorch port, termed TensorBoardX.
+TensorBoard is a visulization toolkit originally developed for the TensorFlow
+[@tensorflow2015-whitepaper] deep learning framework. It is composed of a Python
+library for exporting data from the training process and a web server which
+reads the serialized data and displays it in the browser. The server can be used
+independently from TensorFlow, provided the data is serialized in the
+appropriate format. This enables, e.g., a PyTorch port, termed TensorBoardX.
 
 For exporting data during training, the developer adds operations to the graph
 which write scalars, histograms, audio, or other data asynchronously to disk.
-This data can then be displayed in real-time in the web browser. Besides
-scalar-valued functions, which could be e.g. the loss curve or accuracy measure,
-TensorBoard supports histograms, audio, and embedding data natively. However,
-concrete instances of these classes of training artifact must be defined by the
-user and can only be reused if the developer creates a separate library for the
-computations involved.
+This data can then be displayed in approximately real-time in the web browser.
+Besides scalar-valued functions, which could be e.g. the loss curve or accuracy
+measure, TensorBoard supports histograms, audio, and embedding data natively.
+However, concrete instances of these classes of training artifact must be
+defined by the user and can only be reused if the developer creates a separate
+library for the computations involved.
 
 New kinds of visualizations can be added with plugins, which require not only
 writing the Python code exporting the data and for serving it from the
@@ -153,13 +161,13 @@ Python and Lua.
 
 ### Visdom {.unnumbered}
 
-Visdom by Facebook research fulfills more or less the same purpose as
+Visdom by Facebook Research fulfills more or less the same purpose as
 TensorBoard, but supports Numpy and Lua Torch. In contrast to TensorBoard,
 Visdom includes more features for organizing the display of many visualizations
-at once.
+at once. Still, the framework is mostly geared towards improving workflows for
+data scientists, and is not concerned with providing useful metrics out-of-the-box.
 
 ### Others {.unnumbered}
-
 
 There are other tools such as [DeepVis](http://yosinski.com/deepvis) for
 offline introspection, which offer insights into the training after the fact,
