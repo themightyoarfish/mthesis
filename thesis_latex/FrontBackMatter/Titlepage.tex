@@ -1,0 +1,64 @@
+\documentclass[
+   pdftex,
+   fontsize=11pt,
+   a4paper
+]{scrbook}
+\input{../classicthesis-config}
+\usepackage{setspace}
+
+\usepackage[a4paper,includeall,bindingoffset=0cm,margin=2cm,
+marginparsep=0cm,marginparwidth=0cm]{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\begin{document}
+\begin{titlepage}
+   \thispagestyle{empty}
+   \vspace*{1cm}
+
+   \begin{center}
+
+      \Large
+
+      \includegraphics[width=.5\textwidth]{../gfx/uni.pdf}
+
+      \vspace{2cm}
+
+      Department of Computer Science
+
+      Department of Cognitive Science
+
+      \vspace{2cm}
+
+      {
+         \LARGE
+         \myName
+      }
+
+      \vspace{2cm}
+
+      {
+         \Huge \scshape
+         \setstretch{1.2}
+         \myTitle
+         \par
+      }
+
+      \vspace{2cm}
+
+      {
+         \LARGE \emph{Master's Thesis}
+      }
+
+      \vspace{3cm}
+
+      {
+         \begin{tabular}{>{\bfseries}ll}
+            First Supervisor: & \myFirstSupervisor\\
+            Second Supervisor: & \mySecondSupervisor\\
+            Project Supervisor: & \myProjectSupervisor
+         \end{tabular}
+      }
+
+   \end{center}
+\end{titlepage}
+\end{document}

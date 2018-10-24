@@ -1,0 +1,553 @@
+\hypertarget{ikkuna}{%
+\chapter{Ikkuna}\label{ikkuna}}
+
+Ikkuna is the Python library developed for this thesis. It targets
+Python 3.6 and was designed with the following goals in mind:
+
+\begin{enumerate}
+    \item
+        Ease of use. Minimal configuration, maximum rewards.
+    \item
+        Flexible and all-encompassing API enabling creating arbitrary metrics
+        which act on training artifacts
+    \item
+        Metrics shall be agnostic of model code.
+    \item
+        Plugin architecture so metrics written once can be used for any kind
+        of model
+    \item
+        Framework agnosticism. Ideally, the library would support every deep
+        learning framework through an extensible abstraction layer.
+\end{enumerate}
+
+What it provides over the aforementioned tools is that it enables
+working at a higher level of abstraction, liberating the developer from
+having to repeat herself, exchanging visualizations and metrics and
+reduce the friction between development and debugging.
+
+\hypertarget{design-principles}{%
+\section{Design Principles}\label{design-principles}}
+
+Of the aforementioned goals, all except one have been accomplished. The
+objective of making the library agnostic to the deep learning framework
+being used (TensorFlow, PyTorch, PyCaffe, Chainer, etc.) has been
+neglected for practical reasons. Enabling this kind of support is beyond
+the scope of this thesis and only requires the implementation of a
+software layer which offers framework-agnostic access to network
+modules, activations, gradients and all the other necessary information.
+While this is certainly possible and useful, the PyTorch framework has
+been chosen for this work to create a proof of concept. The choice is
+motivated in \cref{sec:dl-frameworks}.
+
+The overarching architecture of this software must lend itself to this
+agnosticity goal, however. As such, a very loose coupling between model
+code, metric computation and visualizations is desired. Not only will
+this aid in extending the framework to different deep learning
+libraries, but it is also a prerequisite for allowing for modular,
+self-contained visualizations or metrics which can be installed and used
+separately and independently of specific model code.. The
+Publisher-Subscriber design pattern has been chosen for these reasons
+(\cref{sec:pubsub}).
+
+\hypertarget{sec:dl-frameworks}{%
+\section{Deep Learning frameworks}\label{sec:dl-frameworks}}
+
+The currently available deep learning libraries can be located on a spectrum
+between define-by-run and define-and-run.  The first extreme would be a
+framework such as PyTorch \citep{paszke2017automatic} or Chainer
+\citep{tokui2015chainer} , where there exist no two distinct execution phases --
+just like in an ordinary matrix library like NumPy, each statement immediately
+returns or operates on an actual value. By contrast, graph-based frameworks like
+TensorFlow\footnote{Since version 1.4, TensorFlow gravitates toward
+    define-by-run through the introduction of \emph{eager execution}, which
+becomes the default mode in version 2.0. Graph-based execution is still
+available, but not the default any longer.} require specifying the model graph
+in a domain-specific language (TensorFlow has Python, Java and C++ APIs, Caffe
+uses Prototxt files), compile it to a different representation and the the model
+is run and trained in a second phase. While this enables graph-based
+optimizations, the main downsides are that
+
+\begin{itemize}
+    \item
+        control flow cannot use the host language features, but must be done
+        with the API used for defining models. Instead of
+
+        \begin{lstlisting}[language=Python, label=lst:whilepy-pt]
+        counter = torch.tensor(0)
+        # repeated matrix multiplication
+        while counter < tensor:
+            counter += 1
+            h = torch.matmul(W, h) + b
+        \end{lstlisting}
+
+        one must use a construction like this
+        \begin{lstlisting}[language=Python, label=lst:whilepy-tf]
+        counter = tf.constant(0)
+        while_condition = lambda counter: tf.less(counter, tensor)
+        # loop body
+        def body(counter):
+            h = tf.add(tf.matmul(W, h), b)
+            # increment counter
+            return [tf.add(counter, 1)]
+
+        # do the actual loop
+        r = tf.while_loop(while_condition, body, [counter])
+    \end{lstlisting}
+\item
+    halting execution at aribtrary points in the training is not possible,
+    since the actual training is not happening in the host language, but
+    is more often handed off to lower-level implementations in its
+    entirety.
+\end{itemize}
+
+This makes conditional processing and debugging much less ergonomic.
+
+All frameworks have in common that they build a graph representation of
+the model, wether implicitly or explicitly. Nodes in the graph are
+operations while edges are data flowing between operations. This allows
+naturally parallelizing independent computations. To compute gradients,
+the graph can be traversed backwards from the output node by applying
+the chain rule of differentiation. Define-and-run frameworks like
+TensorFlow create the graph explicitly; the user uses the API to do
+exactly this. The graph -- once compiled -- is fixed for the entire
+training process. PyTorch on the other hand implicitly records all
+operations and also overloads operators for this purpose. The graph is
+thus recreated for each propagation through the network. This precludes
+some optimizations, but makes dynamically changing networks easily
+achievable.
+
+For this work, the PyTorch framework has been chosen, due to the fact
+that it is growing quickly in popularity (see \cref{fig:popularity}) and
+relatively new, so the ecosystem is not fully developed and some
+utilities available for e.g.~TensorFlow are not available for PyTorch.
+Because of this, an introspection framework for training momnitoring is
+judged to present the best value proposition for PyTorch users.
+
+\begin{figure}
+    \hypertarget{fig:popularity}{%
+        \centering
+        \includegraphics[max width=\textwidth]{gfx/diagrams/framework_popularity/popularity.pdf}
+        \caption[Changes in popularity of different deep learning libraries in
+        research]{Changes in popularity of different deep learning libraries in
+            research. Data was collected by keyword search over ICLR submissions
+            (\href{http://search.iclr2019.smerity.com/search/}{http://search.iclr2019.smerity.com/search};
+        analogously for 2018)}\label{fig:popularity}
+    }
+\end{figure}
+
+\hypertarget{sec:pubsub}{%
+\section{Publisher-Subscriber}\label{sec:pubsub}}
+
+The Publisher-Subscriber pattern (for a detailed overview see
+\cite{eugster2003}) is a pattern for distributed computation in which publishers
+publish messages either directly to any subscribers which have registered
+interest in them, or to a central authority orchestrating the exchange. Messages
+are generally associated with one or more topics and subscribers register
+interest in receiving messages on one or more topics.
+
+The compontens are very loosely coupled; the subscribers need not even
+be aware of the publishers at all, and the publishers' only interaction
+with their subscribers is relaying messages through a uniform interface
+or through an optional server. A graphical schema of one possible
+incarnation of this pattern is shown in \cref{fig:pubsub}.
+
+\begin{figure}
+    \hypertarget{fig:pubsub}{%
+        \centering
+        \includegraphics[max width=\textwidth]{gfx/diagrams/architecture_diagrams/pubsub.pdf}
+        \caption{One possible implementation of the Publisher-Subscriber pattern.}\label{fig:pubsub}
+    }
+\end{figure}
+
+This project is not distributed, but can benefit from the loose coupling
+in another way: Subscribers can be defined in terms of the kind of
+messages they need to compute their metric, without knowing anything
+about where the messages are coming from. Concretely, as long as the
+appropriate data is emitted from the training process, subscribers can
+work without modifications with any possible model.
+
+Since real-world neural networks are trained on the GPU, and
+communication between host and GPU memory is expensive, making this
+library truly distributed is not an objective. However, the design will
+simplify asynchronous computation of metrics in the future. The Python
+language does not support true multithreading\footnote{The
+    \texttt{multiprocessing} module allows for truly
+    asynchronous computation and communication, but the
+    inter-process-communication is more expensive than memory shared
+between threads.}, but since the expensive part of the work is running
+on the GPU while the host code is waiting, metric computation could
+happen asynchronously on the GPU as well while the expensive forward or
+backward passes through the network are running. This is not currently
+implemented but can be added later, if more computationally demanding
+metrics are to be explored.
+
+In the context of neural network training, there is only one source of
+information and hence only one publisher. Therefore, the message server
+is folded into the singular publisher which extracts data from the
+training model and sends messages to any interested subscribers.
+
+\hypertarget{overview-of-the-library}{%
+\section{Overview of the library}\label{overview-of-the-library}}
+
+The software is structured into several packages. The root package is
+\texttt{ikkuna} which encapsulates all core
+functionality. All other packages and modules contain utilites
+implemented for this work specifically, but will generally not be
+relevant to other users. A survey of these tools will be given in
+\cref{sec:other-tools}.
+
+The root package diagram is shown in \cref{fig:pack-diag-ikkuna}
+
+\begin{figure}
+    \hypertarget{fig:pack-diag-ikkuna}{%
+        \centering
+        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/ikkuna.pdf}
+        \caption{\texttt{ikkuna} package diagram}\label{fig:pack-diag-ikkuna}
+    }
+\end{figure}
+
+The \texttt{models} (see \cref{sec:pack-models})
+subpackage contains a few exemplary neural network definitions which are
+wired up with the library and can thus be used to showcase the library's
+functionality. The \texttt{utils} (see
+\cref{sec:pack-utils}) subpackage contains miscellaneous utility classes
+and functions used throughout the core library. Lastly, the
+\texttt{visulization} subpackage
+(\cref{sec:pack-visualization}) contains the plotting functionality to
+actually show the metrics computed during the training process.
+
+The most important bits of the software live in the
+\texttt{export} subpackage (\cref{sec:pack-export}). It
+implements the Publisher-Subscriber pattern. Extracting data from the
+training process, defining subscriber functionality and messages used
+for communication is done here.
+
+\hypertarget{sec:pack-export}{%
+\subsection{The \texttt{export} subpackage}\label{sec:pack-export}}
+
+The \texttt{export} subpackage contains the core part
+of the library, i.e.~it provides the classes that handle discovering the
+structure of the neural network model, attaching the appropriate
+callbacks and intercepting method calls on the model so the library is
+informed about everything entering and exiting the model and its
+individual layers. It also contains the definition for the subscriber
+API, i.e.~the messages that subscribers can receive, synchronisation
+facilities when multiple topics are needed by a subscriber, as well as
+the subscriber class interface. The package diagram is displayed in
+\cref{fig:pack-diag-export}.
+
+The package comprises three subpackages or modules
+
+\begin{table}
+    \caption{\texttt{ikkuna.export} functionalities}
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        Name                & Function\tabularnewline
+        \midrule
+        \texttt{export}     & Publish data from an arbitrary model and send messages to registered subscribers\tabularnewline
+        \texttt{messages}   & Define message interface; i.e.~what topics exist and which information a message must contain\tabularnewline
+        \texttt{subscriber} & Define the base class for metric
+        subscribers\tabularnewline
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{figure}
+    \hypertarget{fig:pack-diag-export}{%
+        \centering
+        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/export_package_diagram.pdf}
+        \caption{\texttt{ikkuna.export} package diagram}\label{fig:pack-diag-export}
+    }
+\end{figure}
+
+In in slight deviation from the Publisher-Subscriber framework as
+displayed in \cref{fig:pubsub}, the
+\texttt{export.Exporter} class
+(\cref{fig:class-diag-exporter}) is the sole publisher of data. There's
+only one source of data during training, so it is unnecessary to
+accomodate for multiple subscribers. The
+\texttt{Exporter} is informed of the model with its
+methods \texttt{set\_model()} and
+\texttt{set\_loss()}, the latter of which is only
+necessary if metrics which rely on training labels should be displayed.
+It can accept a filter list of classes which are to be included when
+discovering the modules in the model. For instance, it could be
+desirable to only observe layers which have weights and biases
+associated with them, not e.g.~normalisation or reshaping layers. The
+\texttt{Exporter} then traverses the model (which is
+really just a tree structure of modules) and adds to each a callback
+invoked when input enters the layer -- in order to retrieve activations
+-- and when gradients are computed for the layer outputs. The callbacks
+also use cached weights -- if present -- in order to publish updates to
+the weights. Furthermore, it replaces a few of the model's methods with
+closure wrappers so it can
+
+\begin{itemize}
+    \item
+        be notified when the model is set to training or testing mode (this
+        switch disables or enables layers which only make sense during one of
+        the phases\footnote{There are two built-in layers this applies to. One
+            is the batch normalisation layer. It normalises the output of the
+            previous layer with the mean and variance over the entire batch of
+            data. The variance is not defined for single data point enters the
+            layer, as could be the case during inference/testing time. The
+            second case is the dropout layer, which randomly zeroes out a
+            percentage of the previous layer's activations. This is used during
+            training to prevent subsequent units from becoming correlated with a
+            fixed set of units in the previous layer, instead of picking up
+            patterns invariant of where in the input they occur. During
+            inference time, this is turned off to make full use of the trained
+        layers.})
+    \item
+        increase its own step counter automatically when a new batch is seen
+    \item
+        add a parameter to the model's \texttt{forward()}
+        which can be used be subscribers to temporarily turn off training mode
+        and have it revert automatically. This is useful for subscribers which
+        need to evaluate the model (i.e.~feed data through it), but do not
+        want to generate new messages for this occasion.
+    \item
+        intercept labels passed to the loss function during training and
+        publish them as messages so the user need not concern himself with
+        this task
+    \item
+        intercept the final output of the network. This could be realised
+        alternatively by identifying the last module in the network.
+\end{itemize}
+
+The \texttt{Exporter} publishes the following
+information at each training step
+
+\begin{itemize}
+    \item
+        gradients for each module
+    \item
+        activations for each module
+    \item
+        weights and biases for each module that has these properties (
+        e.g.~convolutional or fully-connected layers)
+    \item
+        updates to the weights and biases from the last step to the current
+        one, provided the module has these properties
+\end{itemize}
+
+\begin{figure}
+    \hypertarget{fig:class-diag-exporter}{%
+        \centering
+        \includegraphics[max width=.8\textwidth]{gfx/diagrams/class_diagrams/{ikkuna.export}.pdf}
+        \caption{\texttt{ikkuna.export.Exporter} class diagram}\label{fig:class-diag-exporter}
+    }
+\end{figure}
+
+\hypertarget{sec:pack-models}{%
+\subsection{The \texttt{models} subpackage}\label{sec:pack-models}}
+
+\begin{figure}
+    \hypertarget{fig:pack-diag-models}{%
+        \centering
+        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/models_package_diagram.pdf}
+        \caption{\texttt{ikkuna.models} package diagram}\label{fig:pack-diag-models}
+    }
+\end{figure}
+
+This package shown in \cref{fig:pack-diag-models} contains model
+definitions for demonstration purposes and for experimentation. Three
+architectures are currently implemented:
+
+\begin{enumerate}
+    \item
+        A minified version of AlexNet, since the original architecture
+        requires larger images \citep{krizhevsky2012imagenet}. The
+        code is adapted from the PyTorch implementation.
+    \item
+        DenseNet \citep{huang2017densely}. The implementation is basically the
+        one from \citep{pleiss2017memory}\footnote{At the time of writing, the
+            implementation is available here:
+            \url{https://github.com/gpleiss/efficient_densenet_pytorch/blob/master/models/densenet.py}.
+            The licensing is unclear as the author references the original
+            BSD-licensed implementation at
+            \url{https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py}
+            which was licensed by PyTorch core contributor Soumith Chintala.
+            However, the code does not reproduce the BSD license text and can
+            thus only be inspired by the original but cannot contain any of the
+        code verbatim. It would require careful examination in order to
+    determine whether this is the case.} with minor modifications
+    \item
+        ResNet \citep{he2016deep}. This implementation comes from
+        GitHub user liukang\footnote{The implementation is MIT-licensed.
+        \url{https://github.com/kuangliu/pytorch-cifar/blob/master/models/resnet.py}}
+        and can handle CIFAR10-sized images of 32 pixels per side, as opposed
+        to most implementaions that are geared towards ImageNet examples which
+        are much larger.
+\end{enumerate}
+
+All models are modified such that their training can be supervised by
+the library.
+
+\hypertarget{sec:pack-utils}{%
+\subsection{The \texttt{utils} subpackage}\label{sec:pack-utils}}
+
+As shown in \cref{fig:pack-diag-utils}, this package defines classes for
+traversing a model into a hierarchical tree of layers (called
+\emph{modules} in PyTorch lingo), structures for adding information to
+PyTorch's \texttt{Module} class, and a set of
+miscellaneous functions for
+
+\begin{enumerate}
+    \item
+        Seeding random number generators to make experiments reproducible (see
+        \cref{sec:reproducibility})
+    \item
+        Creating instances of weight optimizers by named
+    \item
+        Initialize the weights of any model
+    \item
+        Loading datasets
+\end{enumerate}
+
+\begin{figure}
+    \hypertarget{fig:pack-diag-utils}{%
+        \centering
+        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/utils_package_diagram.pdf}
+        \caption{\texttt{ikkuna.utils} package diagram}\label{fig:pack-diag-utils}
+    }
+\end{figure}
+
+Additionally, it contains the \texttt{numba} module
+which is inteded to allow interoperability with the Numba
+library\footnote{\url{https://numba.pydata.org/}. Numba is a library for
+    transforming high-level Python code into performant compiled code and
+    for allowing to use the CUDA library from Python with Python arrays.
+    This enables performance improvements for numeric calculations, but
+    there is only a limited set of higher-level functions implemented on
+GPU arrays.}. While currently not used due to the incomplete nature of
+the Numba GPU array interface, it could enable leveraging Numba in the
+future without transferring data to the CPU.
+
+\hypertarget{sec:pack-visualization}{%
+\subsection{The \texttt{visualization} subpackage}\label{sec:pack-visualization}}
+
+This package contains only a single module:
+\texttt{backend}. It defines the classes shown in
+\cref{fig:class-diag-backend}. The module serves as an abstraction over
+plotting libraries so that metrics need not concern themselves with how
+to actually show the data.
+
+A given metric will compute its value and dispatch it to its
+visualization backend, which can currently accept scalar and histogram
+data. The metric class itself need not care about how it is going to be
+displayed.
+
+\begin{figure}
+    \hypertarget{fig:pack-diag-visualization}{%
+        \centering
+        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/visualization_package_diagram.pdf}
+        \caption{\texttt{ikkuna.visualization} package diagram}\label{fig:pack-diag-visualization}
+    }
+\end{figure}
+
+\begin{figure}
+    \hypertarget{fig:class-diag-backend}{%
+        \centering
+        \includegraphics[max width=\textwidth]{gfx/diagrams/class_diagrams/visualization_class_diagram.pdf}
+        \caption{Class diagram for classes in \texttt{ikkuna.visualization}}\label{fig:class-diag-backend}
+    }
+\end{figure}
+
+For running the library locally, a \texttt{matplotlib}-based backend has been
+implemented.  Plotting routines from this library open a window directly on the
+system executing the software. In practice however, deep learning code will be
+executed remotely on a server with adequate compute capability and the
+programmer connected via SSH. While it is possible to have remote windows show
+up locally on Linux-based systems by use of X11-Forwarding, this is generally
+slow and not useful for interactivity. An example is shown in
+\cref{fig:example_mpl} To remedy this issue, a plotting backend on TensorBoard
+is also provided (\cref{sec:existing-apps}). The plotting data is generated and
+processed on the remote system, but served over the web so it can be viewed and
+interacted with locally (provided the network is configured so that the server
+responds to HTTP requests). An example is shown in \cref{fig:example_tb}
+
+\begin{figure}
+    \hypertarget{fig:example_mpl}{%
+        \centering
+        \includegraphics[max width=\textwidth]{gfx/diagrams/software_screens/example_mpl.png}
+        \caption{Exemplary view of a matplotlib figure forwarded over SSH}\label{fig:example_mpl}
+    }
+\end{figure}
+
+\begin{figure}
+    \hypertarget{fig:example_tb}{%
+        \centering
+        \includegraphics[width=\textwidth]{gfx/diagrams/software_screens/example_tb.png}
+        \caption{Exemplary view of a TensorBoard session}\label{fig:example_tb}
+    }
+\end{figure}
+
+\hypertarget{sec:other-tools}{%
+\subsection{Miscellaneous tools}\label{sec:other-tools}}
+
+There are a few modules which simplify development with the library but are not
+part of the distribution obtained from PyPi or by running the setup script.
+
+The \texttt{train} package defines a \texttt{Trainer} class which encapsulates
+all the logic and parameters needed to train a neural network on one of the
+datasets provided with PyTorch. The class's capabilities include the following
+
+\begin{itemize}
+    \item
+        Look up model and dataset by name
+    \item
+        Bundle all hyperparameters
+    \item
+        hook the \texttt{Exporter} into the model for
+        publishing data
+    \item
+        configure the optimisation algorithm to use for training
+    \item
+        train the model for one batch
+\end{itemize}
+
+The \texttt{Trainer} class is used in the main script
+(\texttt{main.py}), which serves as a command line
+interface to the library while developing. When trying out the library,
+it can also be used as an initial starting point.
+
+\begin{table}
+    \caption{Named arguments to \texttt{main.py}}
+    \begin{tabularx}{\linewidth}{lX}
+        \toprule
+        Parameter                                   & Explanation\tabularnewline
+        \midrule
+        \lstinline{-m}, \lstinline{--model}         & Model class to train\tabularnewline
+        \lstinline{-d}, \lstinline{--dataset}       & Dataset to train on. Possible choices: \lstinline{MNIST}, \lstinline{FashionMNIST}, \lstinline{CIFAR10}, \lstinline{CIFAR100}\tabularnewline
+        \lstinline{-b}, \lstinline{--batch-size}    & Default: 128\tabularnewline
+        \lstinline{-e}, \lstinline{--epochs}        & Default: 10\tabularnewline
+        \lstinline{-o}, \lstinline{--optimizer}     & Optimizer to use. Default: \lstinline{Adam}\tabularnewline
+        \lstinline{-a}, \lstinline{--ratio-average} & Number of ratios to average for stability (currently unused). Default: 10\tabularnewline
+        \lstinline{-s}, \lstinline{--subsample}     & Number of batches to ignore between updates. Default: \lstinline{1}\tabularnewline
+        \lstinline{-v}, \lstinline{--visualisation} & Visualisation backend to use. Possible choices: \lstinline{tb}, \lstinline{mpl}. Default: \lstinline{tb}\tabularnewline
+        \lstinline{-V}, \lstinline{--verbose}       & Print training progress. Default: \lstinline{False}\tabularnewline
+        \lstinline{--spectral-norm}                 & Use spectral norm subscriber on weights. Default: \lstinline{False}\tabularnewline
+        \lstinline{--histogram}                     & Use histogram subscriber(s)\tabularnewline
+        \lstinline{--ratio}                         & Use ratio subscriber(s)\tabularnewline
+        \lstinline{--test-accuracy}                 & Use test set accuracy subscriber. Default: \lstinline{False}\tabularnewline
+        \lstinline{--train-accuracy}                & Use train accuracy subscriber. Default: \lstinline{False}\tabularnewline
+        \lstinline{--depth}                         & Depth to which to add modules.  Default: \lstinline{-1}\tabularnewline
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+The library can be installed to the local Python environment by use of the
+provided setuptools script (\texttt{setup.py}). It can also be downloaded from
+the \href{https://pypi.org/}{Python Package Index} by use of the package manager
+\texttt{pip}:
+
+\begin{lstlisting}[language=Python]
+pip install ikkuna
+\end{lstlisting}
+
+\hypertarget{plugin-infrastructure}{%
+\subsection{Plugin Infrastructure}\label{plugin-infrastructure}}
+
+\hypertarget{sec:reproducibility}{%
+\subsection{Reproducibility}\label{sec:reproducibility}}

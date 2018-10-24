@@ -1,0 +1,67 @@
+\documentclass[
+   twoside,
+   titlepage,
+   numbers=noenddot,
+   headinclude,
+   footinclude=false, % no footer
+   paper=a4,
+   11pt,
+]{scrreprt}
+
+\input{classicthesis-config} % all custom classicthesis config stuff
+% \renewcommand{\bibsection}{\chapter{\bibname}} % this gives the bib entry the
+% same style as the other toc lines, but also makes the bib a true appendix,
+% which is unwanted
+
+\begin{document}
+% \onehalfspacing
+\raggedbottom
+\pagenumbering{roman}
+\pagestyle{plain}
+
+%*******************************************************
+% Frontmatter
+%*******************************************************
+\thispagestyle{empty}
+
+\includepdf{FrontBackmatter/Titlepage.pdf}
+
+\cleardoublepage
+\include{FrontBackmatter/Abstract}
+\include{FrontBackmatter/Zusammenfassung}
+
+\pagestyle{scrheadings}
+
+%*******************************************************
+% Mainmatter
+%*******************************************************
+% use \cleardoublepage here to avoid problems with pdfbookmark
+\cleardoublepage
+
+\tableofcontents
+
+\listoftables
+
+\listoffigures
+
+% \newpage % #wtflatex Funnily, if I leave this out, the below statement applies
+% to the page this list ist typeset on. This is ridiculous, how am I the first
+% one to see this?
+
+\pagenumbering{arabic}
+
+\include{Chapters/Chapter1_Introduction}
+
+\include{Chapters/Chapter2_Ikkuna}
+
+\appendix
+
+\include{Chapters/ChapterEND_appendixA}
+
+\include{Chapters/ChapterEND_references}
+
+\include{FrontBackmatter/Acknowledgments}
+
+\include{FrontBackmatter/Declaration_Authorship}
+
+\end{document}
