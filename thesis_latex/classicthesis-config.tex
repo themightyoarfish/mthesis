@@ -483,4 +483,9 @@ minimum height=1em, typewriter]
 
 %% Should be loaded after classicthesis
 \usepackage{ebgaramond}
-\usepackage{cleveref}
+
+\usepackage[noabbrev]{cleveref}
+
+% https://tex.stackexchange.com/a/63242/31250
+\usepackage{xhfill}
+\newcommand{\ditto}[1][.4pt]{\xrfill{#1}~\textquotedbl~\xrfill{#1}}
