@@ -36,17 +36,16 @@ the scope of this thesis and only requires the implementation of a
 software layer which offers framework-agnostic access to network
 modules, activations, gradients and all the other necessary information.
 While this is certainly possible and useful, the PyTorch framework has
-been chosen for this work to create a proof of concept. The choice is
+been chosen for this work to create a proof of the concept. The choice is
 motivated in \cref{sec:dl-frameworks}.
 
 The overarching architecture of this software must lend itself to this
-agnosticity goal, however. As such, a very loose coupling between model
-code, metric computation and visualizations is desired. Not only will
-this aid in extending the framework to different deep learning
-libraries, but it is also a prerequisite for allowing for modular,
-self-contained visualizations or metrics which can be installed and used
-separately and independently of specific model code.. The
-Publisher-Subscriber design pattern has been chosen for these reasons
+agnosticity goal, however. As such, a very loose coupling between model code,
+metric computation and visualizations is desired. Not only will this aid in
+extending the library to different deep learning frameworks, but it is also a
+prerequisite for allowing for modular, self-contained visualizations or metrics
+which can be installed and used separately and independently of specific model
+code. The Publisher-Subscriber design pattern has been chosen for these reasons
 (\cref{sec:pubsub}).
 
 \hypertarget{sec:dl-frameworks}{%
@@ -71,8 +70,7 @@ optimizations, the main downsides are that
     \item
         control flow cannot use the host language features, but must be done
         with the API used for defining models. Instead of
-
-        \begin{lstlisting}[language=Python, label=lst:whilepy-pt]
+        \begin{lstlisting}[language=Python, label=lst:whilepy-pt, gobble=8]
         counter = torch.tensor(0)
         # repeated matrix multiplication
         while counter < tensor:
@@ -81,7 +79,7 @@ optimizations, the main downsides are that
         \end{lstlisting}
 
         one must use a construction like this
-        \begin{lstlisting}[language=Python, label=lst:whilepy-tf]
+        \begin{lstlisting}[language=Python, label=lst:whilepy-tf, gobble=8]
         counter = tf.constant(0)
         while_condition = lambda counter: tf.less(counter, tensor)
         # loop body
@@ -92,12 +90,16 @@ optimizations, the main downsides are that
 
         # do the actual loop
         r = tf.while_loop(while_condition, body, [counter])
-    \end{lstlisting}
-\item
-    halting execution at aribtrary points in the training is not possible,
-    since the actual training is not happening in the host language, but
-    is more often handed off to lower-level implementations in its
-    entirety.
+        \end{lstlisting}
+    \item
+        As a corrolary, the barrier of entry is higher, since a beginner cannot rely on the
+        language feature she knows but must learn how to express many concepts
+        without the host language.
+    \item
+        halting execution at aribtrary points in the training is not possible,
+        since the actual training is not happening in the host language, but
+        is more often handed off to lower-level implementations in its
+        entirety.
 \end{itemize}
 
 This makes conditional processing and debugging much less ergonomic.
@@ -236,18 +238,19 @@ facilities when multiple topics are needed by a subscriber, as well as
 the subscriber class interface. The package diagram is displayed in
 \cref{fig:pack-diag-export}.
 
-The package comprises three subpackages or modules
+The package comprises three subpackages or modules listed in
+\cref{tbl:ikkuna.export}
 
 \begin{table}
     \caption{\texttt{ikkuna.export} functionalities}
+    \label{tbl:ikkuna.export}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
         Name                & Function\tabularnewline
         \midrule
         \texttt{export}     & Publish data from an arbitrary model and send messages to registered subscribers\tabularnewline
         \texttt{messages}   & Define message interface; i.e.~what topics exist and which information a message must contain\tabularnewline
-        \texttt{subscriber} & Define the base class for metric
-        subscribers\tabularnewline
+        \texttt{subscriber} & Define the base class for metric subscribers\tabularnewline
         \bottomrule
     \end{tabularx}
 \end{table}
@@ -260,27 +263,23 @@ The package comprises three subpackages or modules
     }
 \end{figure}
 
-In in slight deviation from the Publisher-Subscriber framework as
-displayed in \cref{fig:pubsub}, the
-\texttt{export.Exporter} class
-(\cref{fig:class-diag-exporter}) is the sole publisher of data. There's
-only one source of data during training, so it is unnecessary to
-accomodate for multiple subscribers. The
-\texttt{Exporter} is informed of the model with its
-methods \texttt{set\_model()} and
-\texttt{set\_loss()}, the latter of which is only
-necessary if metrics which rely on training labels should be displayed.
-It can accept a filter list of classes which are to be included when
-discovering the modules in the model. For instance, it could be
-desirable to only observe layers which have weights and biases
-associated with them, not e.g.~normalisation or reshaping layers. The
-\texttt{Exporter} then traverses the model (which is
-really just a tree structure of modules) and adds to each a callback
-invoked when input enters the layer -- in order to retrieve activations
--- and when gradients are computed for the layer outputs. The callbacks
-also use cached weights -- if present -- in order to publish updates to
-the weights. Furthermore, it replaces a few of the model's methods with
-closure wrappers so it can
+In in slight deviation from the Publisher-Subscriber framework as displayed in
+\cref{fig:pubsub}, the \texttt{export.Exporter} class
+(\cref{fig:class-diag-exporter}) is the sole publisher of data. There is only one
+source of data during training, so it is unnecessary to accomodate multiple
+subscribers. The \texttt{Exporter} is informed of the model with its methods
+\lstinline{set_model()} and \lstinline{set_loss()}, the latter of which is only
+necessary if metrics which rely on training labels should be displayed.  It can
+accept a filter list of classes which are to be included when discovering the
+modules in the model. For instance, it could be desirable to only observe layers
+which have weights and biases associated with them, not e.g.~normalisation or
+reshaping layers. The \texttt{Exporter} then traverses the model (which is
+really just a tree structure of modules) and adds to each a callback invoked
+when input enters the layer -- in order to retrieve activations -- and when
+gradients are computed for the layer outputs. The callbacks also use cached
+weights -- if present -- in order to publish updates to the weights.
+Furthermore, it replaces a few of the model's methods with closure wrappers so
+it can
 
 \begin{itemize}
     \item
@@ -289,23 +288,26 @@ closure wrappers so it can
         the phases\footnote{There are two built-in layers this applies to. One
             is the batch normalisation layer. It normalises the output of the
             previous layer with the mean and variance over the entire batch of
-            data. The variance is not defined for single data point enters the
-            layer, as could be the case during inference/testing time. The
-            second case is the dropout layer, which randomly zeroes out a
-            percentage of the previous layer's activations. This is used during
-            training to prevent subsequent units from becoming correlated with a
-            fixed set of units in the previous layer, instead of picking up
-            patterns invariant of where in the input they occur. During
-            inference time, this is turned off to make full use of the trained
+            data -- optionally with running means and variances over the
+            previousprevious training steps. The variance is not defined for
+            single data point enters the layer, as could be the case during
+            inference/testing time. The second case is the dropout layer, which
+            randomly zeroes out a percentage of the previous layer's
+            activations. This is used during training to prevent subsequent
+            units from becoming correlated with a fixed set of units in the
+            previous layer, instead of picking up patterns invariant of where in
+            the input they occur. During inference time, this is turned off to
+            make full use of the trained
         layers.})
     \item
         increase its own step counter automatically when a new batch is seen
     \item
-        add a parameter to the model's \texttt{forward()}
-        which can be used be subscribers to temporarily turn off training mode
-        and have it revert automatically. This is useful for subscribers which
-        need to evaluate the model (i.e.~feed data through it), but do not
-        want to generate new messages for this occasion.
+        add a parameter to the model's \lstinline{forward()} method -- called by
+        the runtime when data is propagated through the model -- which can be
+        used be subscribers to temporarily turn off training mode and have it
+        revert automatically. This is useful for subscribers which need to
+        evaluate the model (i.e.~feed data through it), but do not want to
+        generate new messages for this occasion.
     \item
         intercept labels passed to the loss function during training and
         publish them as messages so the user need not concern himself with
@@ -315,8 +317,8 @@ closure wrappers so it can
         alternatively by identifying the last module in the network.
 \end{itemize}
 
-The \texttt{Exporter} publishes the following
-information at each training step
+At every time step (training batch), the \texttt{Exporter} publishes the
+following information:
 
 \begin{itemize}
     \item
@@ -324,12 +326,74 @@ information at each training step
     \item
         activations for each module
     \item
-        weights and biases for each module that has these properties (
-        e.g.~convolutional or fully-connected layers)
+        weights and biases for each module that has these properties
+        (e.g.~convolutional or fully-connected layers)
     \item
         updates to the weights and biases from the last step to the current
         one, provided the module has these properties
+    \item
+        Training labels used for the parameter updates. This requires that the
+        \texttt{Exporter} be informed of the loss function object with
+        \lstinline{set_loss()}.
+    \item
+        The batch of input data passed to the network at the current training step
+    \item
+        The final output of the network for the current batch of training data.
+        This is simply the tensor of activations from the last layer and is thus
+        technically duplicated since activations are published anyway. The
+        reason is that some subscribers may only be interested in the network
+        predictions and it is unnecesary to determine automatically the last
+        layer in the network as the loss function has automatic access to
+        the activations and must be tracked anyway for the training labels
 \end{itemize}
+
+Further messages are published only at certain points in the training process
+
+\begin{itemize}
+    \item
+        When a batch starts or ends, a message with the current batch index is published
+    \item
+        When an epoch starts or ends, a message with the current batch index is
+        published. This requires the \texttt{Exporter} be notified with
+        \lstinline{epoch_finished()} by the user, since it is impossible to
+        determine when an epoch is over from inside the model.
+\end{itemize}
+
+All messages are summarised in \cref{tbl:messages}
+
+\begin{table}
+    \centering
+    \caption{Subscribable message kinds}
+    \label{tbl:messages}
+    \begin{tabularx}{\textwidth}{llX}
+        \toprule
+        \rowcolor{verylightblue}\multicolumn{3}{c}{Data topics} \tabularnewline
+        \midrule
+        Identifier                     & Frequency                & Description \tabularnewline
+        \midrule
+        {\lstinline!batch_started!}    & Once every batch         & \tabularnewline
+        {\lstinline!batch_finished!}   & \ditto                   & \tabularnewline
+        {\lstinline!epoch_started!}    & Once every epoch         & \tabularnewline
+        {\lstinline!epoch_finished!}   & \ditto                   & \tabularnewline
+        {\lstinline!input_data!}       & Once every batch         & \tabularnewline
+        {\lstinline!input_labels!}     & \ditto                   & \tabularnewline
+        {\lstinline!network_output!}   & \ditto                   & Activations of the last layer \tabularnewline
+        \bottomrule
+        \rowcolor{verylightblue}\multicolumn{3}{c}{Meta topics} \tabularnewline
+        \midrule
+        Identifier                     & Frequency                & Description \tabularnewline
+        \midrule
+        {\lstinline!weights!}          & Once per layer per batch & Gradients of loss function w.r.t. layer weight matrix \tabularnewline
+        {\lstinline!weight_gradients!} & \ditto                   & \tabularnewline
+        {\lstinline!weight_updates!}   & \ditto                   & \tabularnewline
+        {\lstinline!biases!}           & \ditto                   & Gradients of loss function w.r.t. layer bias matrix \tabularnewline
+        {\lstinline!bias_gradients!}   & \ditto                   & \tabularnewline
+        {\lstinline!bias_updates!}     & \ditto                   & \tabularnewline
+        {\lstinline!activations!}      & \ditto                   & \tabularnewline
+        {\lstinline!layer_gradients!}  & \ditto                   & Gradients of loss function w.r.t. layer output \tabularnewline
+        \bottomrule
+    \end{tabularx}
+\end{table}
 
 \begin{figure}
     \hypertarget{fig:class-diag-exporter}{%
@@ -388,15 +452,14 @@ the library.
 \subsection{The \texttt{utils} subpackage}\label{sec:pack-utils}}
 
 As shown in \cref{fig:pack-diag-utils}, this package defines classes for
-traversing a model into a hierarchical tree of layers (called
-\emph{modules} in PyTorch lingo), structures for adding information to
-PyTorch's \texttt{Module} class, and a set of
-miscellaneous functions for
+traversing a model into a hierarchical tree of layers (called \emph{modules} in
+PyTorch lingo), structures for adding information to PyTorch's \texttt{Module}
+class, and a set of miscellaneous functions for
 
 \begin{enumerate}
     \item
         Seeding random number generators to make experiments reproducible (see
-        \cref{sec:reproducibility})
+        \cref{ch:appendixB})
     \item
         Creating instances of weight optimizers by named
     \item
@@ -422,7 +485,11 @@ library\footnote{\url{https://numba.pydata.org/}. Numba is a library for
     there is only a limited set of higher-level functions implemented on
 GPU arrays.}. While currently not used due to the incomplete nature of
 the Numba GPU array interface, it could enable leveraging Numba in the
-future without transferring data to the CPU.
+future without transferring data to the CPU. The core function was later
+obsoleted by an addition to the PyTorch library\footnote{The main contribution
+of the submodule was to make PyTorch tensors accesible to Numba by
+monkey-patching the \lstinline{__cuda_array_interface__} property. This has since
+been added via pull request \#11984 to the PyTorch repository.}.
 
 \hypertarget{sec:pack-visualization}{%
 \subsection{The \texttt{visualization} subpackage}\label{sec:pack-visualization}}
@@ -461,11 +528,11 @@ executed remotely on a server with adequate compute capability and the
 programmer connected via SSH. While it is possible to have remote windows show
 up locally on Linux-based systems by use of X11-Forwarding, this is generally
 slow and not useful for interactivity. An example is shown in
-\cref{fig:example_mpl} To remedy this issue, a plotting backend on TensorBoard
-is also provided (\cref{sec:existing-apps}). The plotting data is generated and
-processed on the remote system, but served over the web so it can be viewed and
-interacted with locally (provided the network is configured so that the server
-responds to HTTP requests). An example is shown in \cref{fig:example_tb}
+\cref{fig:example_mpl} To remedy this issue, a plotting backend for TensorBoard
+(see \cref{sec:existing-apps}) is also provided. The plotting data is generated
+and processed on the remote system, but served over the web so it can be viewed
+and interacted with locally (provided the network is configured so that the
+server responds to HTTP requests). An example is shown in \cref{fig:example_tb}.
 
 \begin{figure}
     \hypertarget{fig:example_mpl}{%
@@ -507,10 +574,9 @@ datasets provided with PyTorch. The class's capabilities include the following
         train the model for one batch
 \end{itemize}
 
-The \texttt{Trainer} class is used in the main script
-(\texttt{main.py}), which serves as a command line
-interface to the library while developing. When trying out the library,
-it can also be used as an initial starting point.
+The \texttt{Trainer} class is used in the main script (\texttt{main.py}), which
+serves as a command line interface to the library while developing. When trying
+out the library, it can also be used as an initial starting point.
 
 \begin{table}
     \caption{Named arguments to \texttt{main.py}}
@@ -541,7 +607,6 @@ The library can be installed to the local Python environment by use of the
 provided setuptools script (\texttt{setup.py}). It can also be downloaded from
 the \href{https://pypi.org/}{Python Package Index} by use of the package manager
 \texttt{pip}:
-
 \begin{lstlisting}[language=Python]
 pip install ikkuna
 \end{lstlisting}
@@ -549,5 +614,37 @@ pip install ikkuna
 \hypertarget{plugin-infrastructure}{%
 \subsection{Plugin Infrastructure}\label{plugin-infrastructure}}
 
-\hypertarget{sec:reproducibility}{%
-\subsection{Reproducibility}\label{sec:reproducibility}}
+Among the main selling points of this library is the provision to add new
+metrics as plugins and reuse them system-wide for all architectures. Plugins in
+Python projects can be enabled through appropriate use of the
+\texttt{setuptools} library. During the setup process for installing the
+library, entry points are defined by the library which can be used by plugins to
+announce themselves. Ikkuna provides the \lstinline{'ikkuna.export.subscriber'}
+entry point. For registering a plugin, the author must simply use that entry
+point to make a plugin available either through the package it is defined in, or
+through the \lstinline{ikkune.export.subscriber} namespace. For illustration,
+\cref{lst:plugin} shows how to setup a \texttt{setup.py} setuptools file. The
+plugin can be installed like any other Python package with
+\begin{lstlisting}[language=Python]
+python setup.py install
+\end{lstlisting}
+
+\begin{lstlisting}[label=lst:plugin, language=Python, caption=Sample setup script for subscriber plugins]
+#!/usr/bin/env python
+
+from distutils.core import setup
+import setuptools
+
+setup(name='<your package name>',
+    version='<version>',
+    description='<description>',
+    author='<your name',
+    author_email='<your email>',
+    packages=['<package name>'],
+    # ... any other args
+    entry_points={
+        'ikkuna.export.subscriber': [
+            'YourSubscriber = module.file:YourSubscriber',
+        ]
+    })
+\end{lstlisting}
