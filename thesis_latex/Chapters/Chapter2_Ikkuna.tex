@@ -23,7 +23,11 @@ Python 3.6 and was designed with the following goals in mind:
 What it provides over the aforementioned tools is that it enables
 working at a higher level of abstraction, liberating the developer from
 having to repeat herself, exchanging visualizations and metrics and
-reduce the friction between development and debugging.
+reduce the friction between development and debugging. This chapters gives a
+high-level overview of the library components and elaborates on the design
+decisions made during the creation. Throughout the chapters, UML class and
+package diagrams will serve as a mental map for the reader. For brevity, not all
+parts of the library are diagrammed down to the same level of detail.
 
 \hypertarget{design-principles}{%
 \section{Design Principles}\label{design-principles}}
@@ -203,7 +207,7 @@ The root package diagram is shown in \cref{fig:pack-diag-ikkuna}
 \begin{figure}
     \hypertarget{fig:pack-diag-ikkuna}{%
         \centering
-        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/ikkuna.pdf}
+        \includegraphics[max width=.7\textwidth]{gfx/diagrams/class_diagrams/ikkuna_package_diagram.pdf}
         \caption{\texttt{ikkuna} package diagram}\label{fig:pack-diag-ikkuna}
     }
 \end{figure}
@@ -255,10 +259,12 @@ The package comprises three subpackages or modules listed in
     \end{tabularx}
 \end{table}
 
+\subsubsection*{The \texttt{ikkuna.export} subpackage}
+
 \begin{figure}
     \hypertarget{fig:pack-diag-export}{%
         \centering
-        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/export_package_diagram.pdf}
+        \includegraphics[max width=.7\textwidth]{gfx/diagrams/class_diagrams/export_package_diagram.pdf}
         \caption{\texttt{ikkuna.export} package diagram}\label{fig:pack-diag-export}
     }
 \end{figure}
@@ -359,7 +365,25 @@ Further messages are published only at certain points in the training process
         determine when an epoch is over from inside the model.
 \end{itemize}
 
-All messages are summarised in \cref{tbl:messages}
+\subsubsection*{The \texttt{ikkuna.export.messages} submodule}
+
+This submodule contains definitions of all permissible messages kinds, message
+classes and a collection class for message objects. An overview of the classes
+defined in this module is shown in \cref{fig:messages_class_diag}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{{gfx/diagrams/class_diagrams/ikkuna.export.messages}.pdf}
+    \caption{Classes in the \texttt{ikkuna.export.messages} submodule}
+    \label{fig:messages_class_diag}
+\end{figure}
+
+Messages are of one of two types: They are either directly tied to a layer in
+the network and are thus published for each layer, or they contain information
+for the current training step. In that case, they appear only once per training
+step, not once per layer. The meta-messages can carry tensor data (e.g.~input
+data or labels), but need not to (e.g.~notifications about a starting or ending
+epoch). All message kinds are summarised in \cref{tbl:messages}
 
 \begin{table}
     \centering
@@ -367,7 +391,7 @@ All messages are summarised in \cref{tbl:messages}
     \label{tbl:messages}
     \begin{tabularx}{\textwidth}{llX}
         \toprule
-        \rowcolor{verylightblue}\multicolumn{3}{c}{Data topics} \tabularnewline
+        \rowcolor{verylightblue}\multicolumn{3}{c}{Meta topics} \tabularnewline
         \midrule
         Identifier                     & Frequency                & Description \tabularnewline
         \midrule
@@ -379,7 +403,7 @@ All messages are summarised in \cref{tbl:messages}
         {\lstinline!input_labels!}     & \ditto                   & \tabularnewline
         {\lstinline!network_output!}   & \ditto                   & Activations of the last layer \tabularnewline
         \bottomrule
-        \rowcolor{verylightblue}\multicolumn{3}{c}{Meta topics} \tabularnewline
+        \rowcolor{verylightblue}\multicolumn{3}{c}{Data topics} \tabularnewline
         \midrule
         Identifier                     & Frequency                & Description \tabularnewline
         \midrule
@@ -398,10 +422,62 @@ All messages are summarised in \cref{tbl:messages}
 \begin{figure}
     \hypertarget{fig:class-diag-exporter}{%
         \centering
-        \includegraphics[max width=.8\textwidth]{gfx/diagrams/class_diagrams/{ikkuna.export}.pdf}
+        \includegraphics[max width=.8\textwidth]{gfx/diagrams/class_diagrams/{ikkuna.export.Exporter}.pdf}
         \caption{\texttt{ikkuna.export.Exporter} class diagram}\label{fig:class-diag-exporter}
     }
 \end{figure}
+
+\subsubsection*{The \texttt{ikkuna.export.subscriber} subpackage}
+
+The third subpackage contained in the \texttt{ikkuna.export} package defines the
+subscriber part of the Publisher-Subscriber pattern. The diagram of the defined
+classes is shown in \cref{fig:class-diag-subscriber}. The \texttt{Subscriber}
+base class is rudimentary and mandates only the implementation of the metric
+computation by subclasses. In the simplest case, a subscribers is interested in
+only one topic and therefore is coupled to a simple \texttt{Subscription}
+object, which handles bookkeeping tasks such as subsampling the messaage stream,
+routing only relevant messages to the subscriber and counting the received messages.
+
+More generally however, a subscriber may want to receive several pieces of
+information for each layer in each time steps (i.e.~for computing the ratio
+between weight updates and weights). Since the order of messages is not
+guaranteed, the desired messages are unlikely to occur one after the other;
+instead the topics must be synchronised. A \texttt{SynchronizedSubscription}
+buffers messages of the relevant topics until all requested kinds have been
+received for the current training step, before releasing them to the subscriber.
+A subscriber can thus receive a single message or a bundle of messages.
+
+The library comes with a few subscribers already installed (they are themselves
+plugins, see \cref{plugin-infrastructure}). Details are given in
+\cref{tbl:subscribers}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/class_diagrams/{ikkuna.export.subscriber}.pdf}
+    \caption{Classes defined in \texttt{ikkuna.export.subscriber}}
+    \label{fig:class-diag-subscriber}
+\end{figure}
+
+\begin{table}
+    \centering
+    \caption{Pre-packaged subscriber subclasses}
+    \label{tbl:subscribers}
+    \begin{tabularx}{\textwidth}{lX}
+        \toprule
+        Name                             & Functionality                                                                                                                                                         \tabularnewline
+        \midrule
+        \texttt{MeanSubscriber}          & Computes the mean $\mu = \frac{1}{n}\sum_{i=1}^n w_i$ of a tensor                                                                                                     \tabularnewline
+        \texttt{VarianceSubscriber}      & Computes the variance $\sum_{i=1}^n (w_i - \mu)^2$ for a tensor                                                                                                       \tabularnewline
+        \texttt{SumSubscriber}           & Computes the sum $\sum_{i=1}^n w_i$ of a tensor                                                                                                                       \tabularnewline
+        \texttt{NormSubscriber}          & Computes the $p$-Norm $\sqrt[p]{\sum_{i=1}^n w_i^p}$                                                                                                                  \tabularnewline
+        \texttt{RatioSubscriber}         & Computes the average ratio $\frac{1}{n}\sum_{i=1}^n \frac{a_i}{b_i}$ of two tensors, disregarding NaN values                                                          \tabularnewline
+        \texttt{HistogramSubscriber}     & Computes the histogram of a given tensor. This is computationally heavy.                                                                                              \tabularnewline
+        \texttt{SpectralNormSubscriber}  & Computes the spectral norm (largest signular value) $\max_{\mathbf{h}:\mathbf{h}\neq 0} \frac{\left||A\mathbf{h}\right||_2}{\left||\mathbf{h}\right||_2}$ of a tensor \tabularnewline
+        \texttt{TestAccuracySubscriber}  & Computes the ratio of correctly classified examples to total examples over the test set                                                                               \tabularnewline
+        \texttt{TrainAccuracySubscriber} & Computes the ratio of correctly classified examples to total examples over current batch of training data                                                             \tabularnewline
+        \bottomrule
+    \end{tabularx}
+\end{table}
 
 \hypertarget{sec:pack-models}{%
 \subsection{The \texttt{models} subpackage}\label{sec:pack-models}}
@@ -409,7 +485,7 @@ All messages are summarised in \cref{tbl:messages}
 \begin{figure}
     \hypertarget{fig:pack-diag-models}{%
         \centering
-        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/models_package_diagram.pdf}
+        \includegraphics[max width=.7\textwidth]{gfx/diagrams/class_diagrams/models_package_diagram.pdf}
         \caption{\texttt{ikkuna.models} package diagram}\label{fig:pack-diag-models}
     }
 \end{figure}
@@ -471,7 +547,7 @@ class, and a set of miscellaneous functions for
 \begin{figure}
     \hypertarget{fig:pack-diag-utils}{%
         \centering
-        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/utils_package_diagram.pdf}
+        \includegraphics[max width=.7\textwidth]{gfx/diagrams/class_diagrams/utils_package_diagram.pdf}
         \caption{\texttt{ikkuna.utils} package diagram}\label{fig:pack-diag-utils}
     }
 \end{figure}
@@ -506,17 +582,9 @@ data. The metric class itself need not care about how it is going to be
 displayed.
 
 \begin{figure}
-    \hypertarget{fig:pack-diag-visualization}{%
-        \centering
-        \includegraphics[max width=.5\textwidth]{gfx/diagrams/class_diagrams/visualization_package_diagram.pdf}
-        \caption{\texttt{ikkuna.visualization} package diagram}\label{fig:pack-diag-visualization}
-    }
-\end{figure}
-
-\begin{figure}
     \hypertarget{fig:class-diag-backend}{%
         \centering
-        \includegraphics[max width=\textwidth]{gfx/diagrams/class_diagrams/visualization_class_diagram.pdf}
+        \includegraphics[max width=\textwidth]{gfx/diagrams/class_diagrams/{ikkuna.visualization}.pdf}
         \caption{Class diagram for classes in \texttt{ikkuna.visualization}}\label{fig:class-diag-backend}
     }
 \end{figure}
@@ -619,15 +687,20 @@ metrics as plugins and reuse them system-wide for all architectures. Plugins in
 Python projects can be enabled through appropriate use of the
 \texttt{setuptools} library. During the setup process for installing the
 library, entry points are defined by the library which can be used by plugins to
-announce themselves. Ikkuna provides the \lstinline{'ikkuna.export.subscriber'}
-entry point. For registering a plugin, the author must simply use that entry
-point to make a plugin available either through the package it is defined in, or
-through the \lstinline{ikkune.export.subscriber} namespace. For illustration,
+announce themselves. Ikkuna provides the
+\lstinline[language=Python,breaklines=false]{'ikkuna.export.subscriber'} entry
+point. For registering a plugin, the author must simply use that entry point to
+make a plugin available either through the package it is defined in, or through
+the \lstinline{ikkune.export.subscriber} namespace. For illustration,
 \cref{lst:plugin} shows how to setup a \texttt{setup.py} setuptools file. The
 plugin can be installed like any other Python package with
 \begin{lstlisting}[language=Python]
 python setup.py install
 \end{lstlisting}
+which will install all required dependencies inside the current environment. The
+PyTorch library must be installed manually since the binaray distribution is too
+old at the time of writing. Detailed instructions can be found in the user guide
+which is part of the documentation.
 
 \begin{lstlisting}[label=lst:plugin, language=Python, caption=Sample setup script for subscriber plugins]
 #!/usr/bin/env python
@@ -648,3 +721,12 @@ setup(name='<your package name>',
         ]
     })
 \end{lstlisting}
+
+\subsection{Documentation}\label{doc}
+
+The entire codebase is liberally documented using the Sphinx documentation
+processor\footnote{\url{http://www.sphinx-doc.org/}}. The documentation contains
+further documents with a detailed user guide, installation instructions. Sphinx
+allows generating documentation in many formats from the same source, most
+usefully HTML and PDF. At the time of writing, the HTML documentation and API
+reference is hosted at \url{https://peltarion.github.io/ai_ikkuna/}.
