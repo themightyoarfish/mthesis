@@ -10,6 +10,9 @@ $(MAIN_FILE).pdf: $(TEX_SOURCES) FrontBackMatter/Titlepage.pdf
 FrontBackMatter/Titlepage.pdf: FrontBackMatter/Titlepage.tex gfx/uni.pdf
 	cd FrontBackMatter; $(TEX_CMD) Titlepage.tex; cd ..;
 
+watch:
+	latexmk -pdf -pvc $(MAIN_FILE).tex
+
 clean:
 	latexmk -c
 	cd FrontBackMatter && latexmk -c && cd ..
