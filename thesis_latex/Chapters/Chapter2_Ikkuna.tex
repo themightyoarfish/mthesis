@@ -173,7 +173,7 @@ appropriate data is emitted from the training process, subscribers can
 work without modifications with any possible model.
 
 Since real-world neural networks are trained on the GPU, and
-communication between host and GPU memory is expensive, making this
+communication between host and GPU memory is already expensive, making this
 library truly distributed is not an objective. However, the design will
 simplify asynchronous computation of metrics in the future. The Python
 language does not support true multithreading\footnote{The
@@ -188,9 +188,10 @@ implemented but can be added later, if more computationally demanding
 metrics are to be explored.
 
 In the context of neural network training, there is only one source of
-information and hence only one publisher. Therefore, the message server
-is folded into the singular publisher which extracts data from the
-training model and sends messages to any interested subscribers.
+information and hence only one publisher. Nevertheless, a message server is
+introduced to segregate responsibilities. The singular publisher extracts data from the
+training model, passes it on to the server which also accepts subscriber
+registrations and relays messages appropriately.
 
 \hypertarget{overview-of-the-library}{%
 \section{Overview of the library}\label{overview-of-the-library}}
@@ -273,7 +274,7 @@ In in slight deviation from the Publisher-Subscriber framework as displayed in
 \cref{fig:pubsub}, the \texttt{export.Exporter} class
 (\cref{fig:class-diag-exporter}) is the sole publisher of data. There is only one
 source of data during training, so it is unnecessary to accomodate multiple
-subscribers. The \texttt{Exporter} is informed of the model with its methods
+publishers. The \texttt{Exporter} is informed of the model with its methods
 \lstinline{set_model()} and \lstinline{set_loss()}, the latter of which is only
 necessary if metrics which rely on training labels should be displayed.  It can
 accept a filter list of classes which are to be included when discovering the
@@ -324,7 +325,7 @@ it can
 \end{itemize}
 
 At every time step (training batch), the \texttt{Exporter} publishes the
-following information:
+following information on to the message bus (see \cref{fig:messages_class_diag}):
 
 \begin{itemize}
     \item
@@ -380,10 +381,22 @@ defined in this module is shown in \cref{fig:messages_class_diag}.
 
 Messages are of one of two types: They are either directly tied to a layer in
 the network and are thus published for each layer, or they contain information
-for the current training step. In that case, they appear only once per training
-step, not once per layer. The meta-messages can carry tensor data (e.g.~input
-data or labels), but need not to (e.g.~notifications about a starting or ending
-epoch). All message kinds are summarised in \cref{tbl:messages}
+for the current training step applying to the entire network. In that case, they
+appear only once per training step, not once per layer. The meta-messages can
+carry tensor data (e.g.~input data or labels), but need not to
+(e.g.~notifications about a starting or ending epoch). All message kinds are
+summarised in \cref{tbl:messages}.
+
+Messages can be assembled into bundles if a subscribers wants to subscribe
+several topics at once. The \texttt{MessageBundle} class performs all necessary
+error checking to ensure consistency of the contained messages.
+
+The message server from \cref{fig:pubsub} is implemented by the
+\texttt{MessageBus}  class which publishers publish messages onto, accepts
+subscriber registrations, and maintains the lists of known topics. Each
+subscriber may in turn announce one or more new topics which can then be
+subscribed to by others. This is useful since it allows chaining of subscribers
+in order to realise arbitrary post-processing of computed metrics.
 
 \begin{table}
     \centering
@@ -439,12 +452,13 @@ object, which handles bookkeeping tasks such as subsampling the messaage stream,
 routing only relevant messages to the subscriber and counting the received messages.
 
 More generally however, a subscriber may want to receive several pieces of
-information for each layer in each time steps (i.e.~for computing the ratio
+information for each layer in each time step (i.e.~for computing the ratio
 between weight updates and weights). Since the order of messages is not
 guaranteed, the desired messages are unlikely to occur one after the other;
 instead the topics must be synchronised. A \texttt{SynchronizedSubscription}
 buffers messages of the relevant topics until all requested kinds have been
 received for the current training step, before releasing them to the subscriber.
+
 A subscriber can thus receive a single message or a bundle of messages.
 
 The library comes with a few subscribers already installed (they are themselves
@@ -498,7 +512,8 @@ architectures are currently implemented:
     \item
         A minified version of AlexNet, since the original architecture
         requires larger images \citep{krizhevsky2012imagenet}. The
-        code is adapted from the PyTorch implementation.
+        code is adapted from
+        \url{https://github.com/sukilau/Ziff-deep-learning/blob/master/3-CIFAR10-lrate/CIFAR10-lrate.ipynb}.
     \item
         DenseNet \citep{huang2017densely}. The implementation is basically the
         one from \citep{pleiss2017memory}\footnote{At the time of writing, the
