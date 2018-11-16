@@ -745,3 +745,65 @@ further documents with a detailed user guide, installation instructions. Sphinx
 allows generating documentation in many formats from the same source, most
 usefully HTML and PDF. At the time of writing, the HTML documentation and API
 reference is hosted at \url{https://peltarion.github.io/ai_ikkuna/}.
+
+\section{Business Case for the Library}\label{business-case}
+
+This work is done in cooperation with Peltarion
+AB\footnote{\url{http://www.peltarion.com/}}, a software company based in
+Stockholm, Sweden. Peltarion's stated mission is to
+
+\begin{quote}
+    [provide] an
+    operational AI platform for producing real-world AI applications at scale and at
+    speed.
+\end{quote}
+
+The Peltarion platform is a web-based deep learning platform with which users
+can upload, preprocess and modify datasets, create deep neural architectures
+without having to write code and track performance of each model and dataset
+version through experiment versioning. Trained models can be directly deployed
+as a webservice.
+
+The modeling interface presented to the user is shown in \cref{fig:platform}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{gfx/diagrams/software_screens/peltarion_platform.png}
+    \caption{The Peltarion platform modeling screen}
+    \label{fig:platform}
+\end{figure}
+
+While the product in question is code-free for the user, it is powered by a deep
+learning framework on the server side. The business proposition made by
+Peltarion is to make training deep neural networks more affordable, which the
+company wants to realise through savings in development time from problem
+statement to model deployment. As outlined in \cref{sec:motivation}, development
+of state-of-the art deep learning applications requires both expertise and
+education as well as experience. Since experts in any discipline are rare and
+expensive, lowering the cost in this area requires simplifying the process of
+creating deep learning solutions. A code-free platform is one way to accomplish
+this and make deep learning more accesible to users and companies without the
+previously required expertise in research and engineering.
+
+This ties into this objective in two ways. Firstly, by providing an API against
+which training metrics can easily be implemented and served to arbitrary
+backends, engineering effort for metric features of the platform is reduced. For
+this work, plotting backends have been implemented, but the decoupled compontent
+architecture of the \texttt{ikkuna} library was chosen precisely to enable
+arbitrary data sinks for the computed metrics, for instance a web service or a
+database which is accessed by the Peltarion platform to display metrics to the
+user. The engineering team at Peltarion could make use of this library to handle
+metric logging on arbitrary models created by the platform's users without
+having to resort to code generation during translation of the abstract model
+definition created in the browser to the model implementation in the backend.
+
+Secondly, the library -- or the ideas prototyped therein -- will be helpful in
+providing feedback to the user about the state of their experiment. Since the
+platform is at least partially aimed at non-experts, even well-known and simple
+metrics can be of great help in avoiding common pitfalls in model training. This
+directly reduces the opaqueness of the training process to the non-expert user,
+reducing time wasted on fruitless experiments and increasing confidences in the
+product.
+
+It should be stressed, however, that the software implemented for this thesis is
+free and open-source and not owned or licensed by Peltarion AB.
