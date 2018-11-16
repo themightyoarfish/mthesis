@@ -9,11 +9,26 @@ development.
     \label{tbl:pull}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
-        Project      & Contribution \tabularnewline
+        Project              & Contribution                                                  \tabularnewline
         \midrule
-        PyTorch      & Added a document to the official documentation detailing how to make experiments reproducible (see \url{https://pytorch.org/docs/master/notes/randomness.html}).  \tabularnewline
-        CuPy         & Added NumPy-style ordering and comparison functionality for complex number types, thereby enabling all sorts of operations for complex matrices which did not work previously. \tabularnewline
-        TensorBoardX & Documentation improvements \tabularnewline
+        Matplotlib           & Added a note to the official documentation about the API
+                               for \texttt{errorbar} (commit hash
+                               \texttt{3a698d6e7d972d2c18fe4d2524e92ff637326f88})            \tabularnewline
+        PyTorch              & Added a document to the official documentation detailing
+                               how to make experiments reproducible (see
+                               \url{https://pytorch.org/docs/master/notes/randomness.html}).
+                               The note has been modified since creation.                    \tabularnewline
+        CuPy                 & Added NumPy-style ordering and comparison
+                               functionality
+                               for complex number types, thereby enabling all sorts of operations for
+                               complex matrices which did not work previously. This required
+                               modifications to the C++ code backing the library and the glue code
+                               generating the Python interface. Relevant commits are
+                               \texttt{6f92c30a6e41a7cd512f17f6a32302f0b8d0970d},
+                               \texttt{55d504e4183c271c640d566d8691f763d6276af5},
+                               \texttt{bad61578a1f69d46397b7c2556a2787493d44455} and
+                               \texttt{04506438a1142b98cd1a326fc1d423459aac1433}             \tabularnewline
+        TensorBoardX         & Documentation improvements                                    \tabularnewline
         \bottomrule
     \end{tabularx}
 \end{table}
