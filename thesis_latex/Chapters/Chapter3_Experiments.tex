@@ -1,7 +1,7 @@
 \chapter{Experiments in live introspection}
 
 In this chapter, several hypotheses for diagnosing roadblocks in the training
-proprocess are introduced, motivated, and evaluated by use of the Ikkuna
+proprocess are introduced, motivated, and evaluated by use of the \texttt{ikkuna}
 library. This thesis is not concerned with advancing the state of the art in
 classification. Instead, toy problems are developed in order to prove or
 disprove that the proposed metrics have the potential to be useful in guiding
@@ -44,7 +44,7 @@ arbitrarily chosen small learning rate around $0.01$ which is then adapded
 either by the aforementioned mechanisms or by search over the parameter space
 when computationally feasible.
 
-In this section, the Ikkuna library is employed to find correlates of
+In this section, the \texttt{ikkuna} library is employed to find correlates of
 inappropriate learning rates which could then be used to adjust its value during
 training.
 
@@ -91,10 +91,13 @@ constant.
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/experiment_validation.pdf}
-    \caption{Final accuracies after 100 epochs}
+    \caption[Final accuracies after 100 epochs]{Final accuracies after 100
+    epochs with a learning rate of $0.2$ and batch size of $128$. The adaptive
+    ratio schedule is discussed in\cref{sec:ratio-schedule}}
     \label{fig:validation1}
 \end{figure}
 
+\subsubsection{The Adaptive Update-to-Weight-Ratio Schedule}\label{sec:ratio-schedule}%
 As a first proof of concept, an adaptive learning rate based on the ratio
 between weight updates and weights is implemented with the help of the library.
 
@@ -135,11 +138,28 @@ target of $\frac{1}{t} = 10^{-3}$ is a reasonable value.
 schedules (constant, exponential decay, ratio-adaptive) with different base
 learning rates. The network was trained from scratch $5$ times for each combination.
 
-The experiment shows surprising results, namely that a this simple scheme of
-dynamically adapting the learning rate to the magnitude of weight change at each
-training step easily outperforms any constant value for $\eta$ and achieves
-almost state-of-the-art accuracy in some cases (the best reported performance
-by \citet{shakedrop} is $97.69\%$).
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_adaptive_accuracies.pdf}
+    \caption[Accuracy traces for different schedules on CIFAR10]{Accuracy traces
+    for different schedules on CIFAR10. Batch size and initial learning rate are
+    shown above each subplot. The exponential decay schedule uses a decay factor of
+    $0.98$. Chance level is $0.1$. The experiments are run for $100$ epochs
+    each.}
+    \label{fig:schedule-accuracies}
+\end{figure}
+
+The results are not especially promising, which is unsurprising for such a
+simple schedule. For the smaller learning rates, it is not better or worse than
+a constant or exponentially decaying schedule. However, for unnecessarily high
+learning rates, the adaptive schedule outperforms the constant one, hinting at a
+possible signal for identifying too high learning rates. This holds for the
+smaller of the three batch sizes, which makes sense as a high batch size is
+generally more amenable to a high learning rate, as the larger sample size
+reduces the noise in the gradient and makes for a smoother loss landscape as the
+gradients for all samples are averaged. This signal could hence be useful for
+identifying too-high learning rates in the presence of noisy gradients (i.e.
+small batch sizes).
 
 As an impression of how the library presented in \cref{ikkuna} simplifies a
 general implementation of such a learning rate schedule, code is provided here.
