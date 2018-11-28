@@ -415,6 +415,7 @@ in order to realise arbitrary post-processing of computed metrics.
         {\lstinline!input_data!}       & Once every batch         & \tabularnewline
         {\lstinline!input_labels!}     & \ditto                   & \tabularnewline
         {\lstinline!network_output!}   & \ditto                   & Activations of the last layer \tabularnewline
+        {\lstinline!loss!}             & \ditto                   & Loss over the current batch \tabularnewline
         \bottomrule
         \rowcolor{verylightblue}\multicolumn{3}{c}{Data topics} \tabularnewline
         \midrule
@@ -486,7 +487,7 @@ plugins, see \cref{plugin-infrastructure}). Details are given in
         \texttt{NormSubscriber}          & Computes the $p$-Norm $\sqrt[p]{\sum_{i=1}^n w_i^p}$                                                                                                                  \tabularnewline
         \texttt{RatioSubscriber}         & Computes the average ratio $\frac{1}{n}\sum_{i=1}^n \frac{a_i}{b_i}$ of two tensors, disregarding NaN values                                                          \tabularnewline
         \texttt{HistogramSubscriber}     & Computes the histogram of a given tensor. This is computationally heavy.                                                                                              \tabularnewline
-        \texttt{SpectralNormSubscriber}  & Computes the spectral norm (largest signular value) $\max_{\mathbf{h}:\mathbf{h}\neq 0} \frac{\left||A\mathbf{h}\right||_2}{\left||\mathbf{h}\right||_2}$ of a tensor \tabularnewline
+        \texttt{SpectralNormSubscriber}  & Computes the spectral norm (largest signular value) $\max_{\mathbf{h}:\mathbf{h}\neq 0} \frac{\left||A\mathbf{h}\right||_2}{\left||\mathbf{h}\right||_2}$ of a tensor reshaped to $2$-d \tabularnewline
         \texttt{TestAccuracySubscriber}  & Computes the ratio of correctly classified examples to total examples over the test set                                                                               \tabularnewline
         \texttt{TrainAccuracySubscriber} & Computes the ratio of correctly classified examples to total examples over current batch of training data                                                             \tabularnewline
         \bottomrule
@@ -785,7 +786,7 @@ creating deep learning solutions. A code-free platform is one way to accomplish
 this and make deep learning more accesible to users and companies without the
 previously required expertise in research and engineering.
 
-This ties into this objective in two ways. Firstly, by providing an API against
+This thesis ties into this objective in two ways. Firstly, by providing an API against
 which training metrics can easily be implemented and served to arbitrary
 backends, engineering effort for metric features of the platform is reduced. For
 this work, plotting backends have been implemented, but the decoupled compontent

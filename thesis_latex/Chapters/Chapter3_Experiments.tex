@@ -1,35 +1,75 @@
 \chapter{Experiments in live introspection}
 
-In this chapter, several hypotheses for diagnosing roadblocks in the training
-proprocess are introduced, motivated, and evaluated by use of the \texttt{ikkuna}
-library. This thesis is not concerned with advancing the state of the art in
+This chapter serves the purpose of showcasing the library and validating its
+usefulness for actual deep learning research. While the ultimate goal is to have
+a set of well-researched metrics in place which can be used live during
+training, the way to acquire these metrics requires extensive analysis from many
+experiments. Therefore, the goal of this work is to obtain such metrics, not
+actually use them. This entails that the library is used primarily for easily
+gathering all the data from the necessary experiments, and not for supervising
+the actual training.
+
+The chapter is divided between a reproduction part (see
+\cref{sec:optimization_validation}) and an original research part (see
+\cref{sec:detecting_learning_rate_proprocess} and
+\cref{sec:detecting_layer_saturation}). In the former, experiments are conducted
+for two popular variations of gradient descent are reproduced and extended with
+the help of the library. The goal is to fact-check claims made by the authors
+and validate said claims on more scenarios than are shown in the respective
+publications. This will serve to show how \texttt{ikkuna} could have been
+employed for this type of work. The second part will be concerned with employing
+the library to investigate hypotheses for diagnosing roadblocks in the training
+proprocess. Recall from \cref{sec:motivation} the multitude of hyperparameters
+for a deep learning model and training regimen. In this work, we will concern
+ourselves with the question of figuring out a good learning rate and when to
+stop training layers to reduce computation time.
+
+This thesis is not concerned with advancing the state of the art in
 classification. Instead, toy problems are developed in order to prove or
 disprove that the proposed metrics have the potential to be useful in guiding
 the training. A more thorough evaluation of the results on realistic
-architectures and problem sizes would require significant computational
-resources and is left for future work.
+architectures and problem sizes would require significantly more time and
+computational resources and is left for future work.
+
+\section{Experimental Methodology}%
+\label{sec:experimental_methodology}
+
+For all experiments, \texttt{ikkuna} is used for recording various metrics
+during training without having to adapt to any specific model. Experiments are
+run on a Google Cloud virtual instance with $4$ Intel Xeon CPUs and Nvidia Tesla
+K80 graphics cards with 11gb of video memory. The information captured by
+\texttt{ikkuna} during training is logged to a MongoDB schemaless database with
+the help of the \texttt{sacred} library. The data can then be analysed off-line
+with MongoDB's Python interface. Plots are created with \texttt{matplotlib} and
+\texttt{seaborn}.
 
 \section{Detecting Learning Rate Problems}%
 \label{sec:detecting_learning_rate_problems}
 
+\subsection{Ratio-Adaptive Learning Rate Scheduling}%
+\label{sub:ratio_adaptive_learning_rate_scheduling}
+
 The first problem to be investigated is that of choosing an appropriate learning
-rated. In standard stochastic gradient descent, a loss $J$ of some the
+rated. We begin with a brief review of gradient descent and then evaluate how
+the update-to-weight ratio of model weights can be used to identify bad learning
+rates or automate learning rate selection.
+
+In standard stochastic gradient descent, a loss $J$ of some the
 model parameters $\boldsymbol\theta$ (here, the layer weights) is computed over the training set of $m$
 examples by forming the expectation over the sample loss $L$:
 
 \begin{align}
-    J(\boldsymbol\theta) &= \mathrm{E}_{\mathbf{x},y\sim\hat{p}_{\text{data}}} L(\mathbf{x}, y, \boldsymbol\theta) \\
+    J(\boldsymbol\theta) &= \mathbb{E}_{\mathbf{x},y\sim\hat{p}_{\text{data}}} L(\mathbf{x}, y, \boldsymbol\theta) \\
                          &= \frac{1}{m}\sum_{i=1}^{m}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
 \end{align}
-
 The cumulative loss can then be derived for $\boldsymbol\theta$
 
 \begin{align}
     \nabla_{\boldsymbol\theta}J &= \frac{1}{m}\sum_{i=1}^{m}\nabla_{\boldsymbol\theta}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
 \end{align}
-
 per the sum rule of differentiation. The simplest form of parameter update rule
 is then
+
 \begin{align}
     \boldsymbol\theta &\leftarrow \boldsymbol\theta - \eta \nabla_{\boldsymbol\theta}J
 \end{align}
@@ -38,24 +78,43 @@ parameter should be, and it is subject of large swathes of literature. Popular
 modifications to the vanilla update rule are the use of momentum
 \citep{jacobs1988increased}, per-layer learning rates (ibd.), reducing the rate
 throughout training, or adapting the
-learning rate based on mean and variance of parameters across past time steps
+learning rate based on mean and variance of gradients across past time steps
 \citep{kingma2014adam}. Nevertheless, most of the time, training begins with an
 arbitrarily chosen small learning rate around $0.01$ which is then adapded
-either by the aforementioned mechanisms or by search over the parameter space
-when computationally feasible.
+either by the aforementioned mechanisms or by search over the parameter space on
+a subset of the training data when computationally feasible.
 
-In this section, the \texttt{ikkuna} library is employed to find correlates of
-inappropriate learning rates which could then be used to adjust its value during
-training.
+As a first hypothesis, we investigate a claim made by \citet{karpathycs231n} who
+states that the ratio between updates and weights is a quantity which should be
+monitored and constrained. He suggests a target of $\frac{1}{t} = 10^{-3}$ as a
+reasonable value, but to the author's knowledge there has never been a thorough
+investigation of this hypothesis. Because of this lack of exploration and the
+celebrity of the proponent, this merits further investigation.
 
-\subsection{Experiment 1}%
-\label{sub:experiment_1}
+It seems intuitive that this target cannot be static throughout training, since
+we usually decay the learning rate towards the end, leading to smaller magnitude
+of updates (this is a prerequisite for theoretical convergence guarantees for
+SGD, see \citet[p. 20]{saad1998online}). It is also not clear whether the target
+should apply to all layers equally. For instance, in networks with the (now
+outdated) tanh activation function, the later layer's gradients are larger as
+fewer backpropagation steps have been done to them, and for this activation
+function at least, each application of the chain rule entails mutliplication
+with a factor $< 1$ (as the tanh derivative never exceeds $1$ and decreases to
+almost $0$ in both limtis), so gradients become exponentially small. In fact,
+the vanishing gradient problem was the main driver to introduce non-saturating
+activation functions.  Other nonlinearites such as the rectified linear unit do
+not exhibit the same behaviour, but that does not mean all layers must change at
+the same rate.
 
-The first experimental setup uses the simplified AlexNet architecture
+As a first approach to an evaluation, we want to try and select the learning
+rate in such a way as to hit the target postulated by
+\citeauthor{karpathycs231n}.
+
+The experimental setup uses the simplified AlexNet architecture
 (\cref{sec:pack-models}) shown in \cref{fig:alexnetmini}. The dataset used is
-the well-known CIFAR-10 dataset consiting of $60.000$ $32\times32$ colour images
-from ten object categories \citep{krizhevsky2009learning}. The opimizations
-alogrithm is plain stochastic gradient descent on minibatches of size $128$. The
+the well-known CIFAR-10 dataset consisting of $60.000$ $32\times32$ colour images
+from ten object categories \citep{krizhevsky2009learning}. The opimisation
+alogrithm used is plain stochastic gradient descent on minibatches of size $128$. The
 dataset does not constitute a hard problem to solve; state of the art accuracies
 lie around $95\%$. For this reason, a descision must be made about how to make
 the problem hard enough so that improvements to the training schedule can
@@ -71,7 +130,8 @@ $45\%$ accuracy).
     filters, respectively, with ReLU nonlinearities. Maximum pooling is applied
     with a filter and stride size of $2$ leading to a resolution a fourth of the
     original size. The classifier portion employs dropout layers to reduce
-    co-adaptation of units and a final softmax activation to map outputs to $(0,1)$.}
+    co-adaptation of units and a final softmax activation to map outputs to
+    class probabilities in $(0,1)$.}
     \label{fig:alexnetmini}
 \end{figure}
 
@@ -98,8 +158,11 @@ constant.
 \end{figure}
 
 \subsubsection{The Adaptive Update-to-Weight-Ratio Schedule}\label{sec:ratio-schedule}%
-As a first proof of concept, an adaptive learning rate based on the ratio
-between weight updates and weights is implemented with the help of the library.
+
+As a first showcase of the library and a test of the update-weight ratio
+hypothesis, an adaptive learning rate based on the aforementioned ratio is
+implemented with the help of the library.  We will start by formally describing
+the update rule and then show how it is implemented with \texttt{ikkuna}.
 
 Let $l$ be the number of layers with weight matrices associated with them (for
 instance linear or convolutional layers, but not activation functions, dropout,
@@ -112,7 +175,6 @@ smoothing.  Now, let
 \begin{equation}
     R_{i,k} = \frac{||W_{i,k} - W_{i,k-1}||_2}{||W_{i,k}||_2}
 \end{equation}
-
 be the ratio between the $L2$-Norms of layer $i$'s weight updates before step $k$ step
 and the weights at step $k$ themselves.  We then select the new learning rate
 for batch step $k+1$ as
@@ -124,16 +186,14 @@ for batch step $k+1$ as
                    \sum_{i=0}^{l-1} \gamma R_k + (1 - \gamma) R_{k-1}
                    \right)^{-1}
 \end{align}
-
 for $k \ge 2$.  This is the average exponentially smoothed update-weight-ratio,
 divided by the target range. This learning rate is used for vanilla gradient
 descent without any other modifications beyond capping it to some value in case
 of very small ratios. The effect of adapting the learning rate according to this
 schedule is that the average ratio between the weight updates and the weights
-moves towards the target range. The idea that the ratio between updates and
-weights is a quantity which should be constrained has not been extensively
-investigated. The claim is made by \citet{karpathycs231n}, who states that a
-target of $\frac{1}{t} = 10^{-3}$ is a reasonable value.
+moves towards the target range.  It should be noted that this update rule biases
+the learning rate in favour of the smaller layers since all ratios are weighted
+equally, regardless of the number of weights.
 \cref{fig:schedule-accuracies} displays a set of accuracy traces for each of the
 schedules (constant, exponential decay, ratio-adaptive) with different base
 learning rates. The network was trained from scratch $5$ times for each combination.
@@ -149,7 +209,7 @@ learning rates. The network was trained from scratch $5$ times for each combinat
     \label{fig:schedule-accuracies}
 \end{figure}
 
-The results are not especially promising, which is unsurprising for such a
+The results are not overwhelming, which is unsurprising for such a
 simple schedule. For the smaller learning rates, it is not better or worse than
 a constant or exponentially decaying schedule. However, for unnecessarily high
 learning rates, the adaptive schedule outperforms the constant one, hinting at a
@@ -157,16 +217,18 @@ possible signal for identifying too high learning rates. This holds for the
 smaller of the three batch sizes, which makes sense as a high batch size is
 generally more amenable to a high learning rate, as the larger sample size
 reduces the noise in the gradient and makes for a smoother loss landscape as the
-gradients for all samples are averaged. This signal could hence be useful for
-identifying too-high learning rates in the presence of noisy gradients (i.e.
-small batch sizes).
+gradients for more samples are averaged. On the other hand, the adaptive schedule
+is also better than a constant one for very small learning rates on large batch
+sizes. So it not only works in preventing too-high learning rates, but also too
+low ones. This signal could hence be useful for
+identifying inappropriate learning rates in small or large batch sizes.
 
 As an impression of how the library presented in \cref{ikkuna} simplifies a
 general implementation of such a learning rate schedule, code is provided here.
 
-When an \verb+Exporter\+ is configured for a given model, a
+When an \verb+Exporter+ is configured for a given model, a
 \verb+RatioSubscriber+ (see \cref{tbl:subscribers}) must be added to the message
-bus in order for the update-weigh-ratio ($R_{i,k}$ in the above equations) to be
+bus in order for the update-weight-ratio ($R_{i,k}$ in the above equations) to be
 published. One can then subscribe them and process the information with this
 subscriber:
 \begin{lstlisting}[language=Python]
@@ -195,19 +257,18 @@ class RatioLRSubscriber(PlotSubscriber):
         '''Compute learning rate multiplicative. Will output 1 for the first batch since no layer
         ratios have been recorded yet. Will also output 1 if the average ratio is close to 0.
         Will clip the factor to some max limit'''
+
         n_layers = len(self._ratios)
         if n_layers == 0:   # before first batch
             return 1
         else:
             mean_ratio = sum(ratio for ratio in self._ratios.values()) / n_layers
-            if mean_ratio <= 1e-9:
+            # prevent numerical issues and keep current LR in that case
+            if mean_ratio <=  1e-9:
                 return 1
             else:
                 factor = self._target / mean_ratio
-                if factor > self._max_factor:
-                    return self._max_factor
-                else:
-                    return factor
+                return min(factor, self._max_factor)
 
     # invoked by the runtime for each incoming message
     def compute(self, message):
@@ -218,7 +279,7 @@ class RatioLRSubscriber(PlotSubscriber):
             R_ik            = message.data
             R_ik_1          = self._ratios[i]
             gamma           = self._smoothing
-            self._ratios[i] = (gamma * R_ik + (1 - gamma) * R_ik_1)
+            self._ratios[i] = gamma * R_ik + (1 - gamma) * R_ik_1
         elif message-kind == 'batch_started':
             # before a batch starts, update the lr multiplier
             self._factor = self._compute_lr_multiplier()
@@ -230,3 +291,52 @@ class RatioLRSubscriber(PlotSubscriber):
 The subscriber implements the \verb+__call__()+ method so it can be dropped into
 PyTorch's learning rate scheduler (\verb+torch.optim.lr_scheduler.LambdaLR+).
 This learning rate schedule can thus be used in every model, without modification.
+
+
+\subsection{Effects Of Update-to-Weight-Ratio On Training Loss}%
+\label{sub:effects_update_to_weight_ratio_on_training_loss}
+
+We have seen in the previous section that at least for pathological cases the UW
+ratio can be used to correct the learning rate to some extent. In this section,
+we want to examine how this ratio does or should change during training. As
+discussed in \cref{sub:ratio_adaptive_learning_rate_scheduling}, it is unlikely
+that a constantly high rate of change to the weights will be beneficial
+throughout the entire training. We would therefore like to find a relation
+between the loss decrease, the current UW ratio and the point in time during
+training. This could help us improve the learning rate schedule developed above
+and refine the use of the UW ratio as a signal for inappropriate learning rates.
+
+For this experiment, we learn CIFAR-10 for $75$ epochs, again with a batch size
+of $128$, with vanilla SGD and different learning rates. We use the AlexNetMini
+architecture again, as well as a larger, more powerful VGG network (schema in
+\cref{fig:vgg16}). We employ \verb+ikkuna+ to record losses, accuracies and UW
+ratios for each layer automatically during training. In order to mage larger
+trends visible, we smooth the loss trace with a gaussian kernel.
+
+\subsubsection*{VGG}
+
+In \cref{fig:ratio_loss_corr_vgg_sgd_001,fig:ratio_loss_corr_vgg_sgd_005,fig:ratio_loss_corr_vgg_sgd_01}
+we plot the loss traces and their inverse derivative (the amount of decrease) in
+the upper right, the average weight-update ratio in the lower right, and a
+scatterplot of ratio versus loss decrease on the left.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001.png}
+    \caption{Experimental Results for VGG with SGD and learning rate $0.01$}
+    \label{fig:ratio_loss_corr_vgg_sgd_001}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005.png}
+    \caption{Experimental Results for VGG with SGD and learning rate $0.05$}
+    \label{fig:ratio_loss_corr_vgg_sgd_005}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01.png}
+    \caption{Experimental Results for VGG with SGD and learning rate $0.1$}
+    \label{fig:ratio_loss_corr_vgg_sgd_01}
+\end{figure}
