@@ -8,6 +8,16 @@
    11pt,
 ]{scrreprt}
 
+% this macro enables hyphenation on typewritten words and makes an invisible
+% codepoint the hyphenchar.
+% I took this from http://tex.stackexchange.com/a/45302/31250
+% Strangely, applying http://tex.stackexchange.com/a/44362/31250 in the preamble
+% did not work
+\newcommand*{\code}[1]{\begingroup\ttfamily\hyphenchar\font=23{#1}\endgroup}
+\lccode`\:`\:
+
+
+
 \input{classicthesis-config} % all custom classicthesis config stuff
 % \renewcommand{\bibsection}{\chapter{\bibname}} % this gives the bib entry the
 % same style as the other toc lines, but also makes the bib a true appendix,
@@ -55,6 +65,8 @@
 \include{Chapters/Chapter2_Ikkuna}
 
 \include{Chapters/Chapter3_Experiments}
+
+\include{Chapters/Chapter4_Future_Work}
 
 \appendix
 

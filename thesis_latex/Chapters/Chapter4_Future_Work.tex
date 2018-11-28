@@ -1,0 +1,78 @@
+\chapter{Future Work}%
+\label{cha:future_work}
+
+This chapter will examine some avenues of inquiry which for several reasons are
+beyond the scope of this work.
+
+\section{Tracking Second-Order Information}%
+\label{sec:tracking_second_order_information}
+
+While the success of purely gradient-based methods is remarkable in the
+light of the proliferation of local minima and saddle points in highly
+non-convex objectives in many dimensions (for a review on the saddle-point problem, see
+\citet{dauphin2014identifying}), second-order information about the curvature of
+the loss function around the current point in parameters space would provide
+more valuable guides for selecting the direction of the next update step in
+parameter space.
+
+The central problem in obtaining second-order information about the loss
+function is the dimensionality of the parameter space. The Hessian $H$ of a
+scalar function $f(\boldsymbol{\theta})$ of a parameter vector $\boldsymbol{\theta} \in
+\mathcal{R}^d$ is of size $d\times d$. Even storing this matrix is infeasible
+for networks of millions of parameters, let alone computing it.
+But the Hessian is what e.g. the Newton algorithm requires in higher dimensions.
+
+There exist some second-order algorithms for non-convex optimisation.  One such
+algorithm is Limited Memory BFGS \citep{liu1989limited}, an adaptation of the
+BFGS algorithm -- which estimates the inverse Hessian with respect to all model
+parameters -- that remembers only some history of update steps and gradients.
+Another method is Conjugate Gradient Descent (originally described by
+\citet{fletcher1964function}), which does not require the Hessian explicitly,
+but only needs to compute Hessian-vector products, which is much easier.
+
+Still, these methods have so far not demonstrated better performance in practice than
+variants of first-order gradient descent. It is still an active area of research
+how the second derivative can aid in speeding up convergence of the optimisation
+or avoid some of the guesswork involved in finding good step sizes.
+
+The library developed in this work has been used to track eigenvalues of the
+Hessian estimated via deflated stochastic power iteration. For a diagonalisable
+matrix $A$ and an initial estimate $\mathbf{q}_0$ with unit norm, the power method
+(also known as Von-Mises iteration) computes the iterate
+\begin{align}
+    \mathbf{q}_k &= \frac{A\mathbf{q}_{k-1}}{||A\mathbf{q}_{k-1}||}_2
+\end{align}
+This series converges to the dominant eigenvector $\mathbf{v}_1$ of $A$ or not at all.
+The corresponding eigenvalue $\lambda_1$ can be computed as
+\begin{align}
+    \lambda_1 = \frac{\left(A\mathbf{v}_1\right)^T\mathbf{v}_1}{\mathbf{v}^T\mathbf{v}}
+\end{align}
+per the definition of the eigenvalue. Deflation can then be used to obtain a
+matrix $B$ whose dominant eigenvalue is the second largest eigenvalue of $A$.
+\begin{align}
+    B &= A - \lambda_1 \mathbf{v}_1\mathbf{v}_1^T
+\end{align}
+This allows computing the top-$k$ eigenpairs for any $k \le d$. The implementation by
+\citet{golmant2018} uses PyTorch's \texttt{autograd} functionality to compute
+the Hessian-Vector product $H\mathbf{q_k}$ with $\mathbf{q}_0 \sim U(0,1)$. The
+estimate is stochastic since it used a fixed number of batches from the dataset
+instead of all samples.
+
+The functionality is realised in the \code{HessianEigenSubscriber} in the
+\code{ikkuna. export.subscriber} subpackge. Eigenvalues and eigenvectors could
+be used for directing the gradient descent process (\citet{alain2018negative}
+tentatively find that largest decreases of the loss can often be made when
+stepping along the most negative eigendirection, i.e. the most negative
+curvature), but this would be an active intervention into the training, which is
+not the goal of the library. More practically however, the hessian eigenvalues
+carry information about the sharpness of a local minimum and could be used for
+diagnosing stability of the current mimiser, which is relevant both for
+generalisation ability and resilience against adversarial attacks (inputs
+crafted to fool the network). There has been some recent work arguing for
+smaller batch sizes -- one of the parameters whose choice we want to simplify
+for the user -- as they tend to generalise better (see e.g.
+\citep{keskar2016large}). The claim is disputed, but \citet{yao2018hessian} find
+that larger batch sizes during training strongly correlate with larger dominant
+eigenvalues of the Hessian. It is unclear if an absolute value can be determined
+for a given model and loss function at which the recommendation to reduce the
+batch size can be made, but this is an interesting area for future research.
