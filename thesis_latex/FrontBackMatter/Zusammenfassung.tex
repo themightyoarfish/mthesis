@@ -1,49 +1,33 @@
 \chapter*{Zusammenfassung}
 
 \begin{otherlanguage}{german}
+     Künstliche neuronale Netze haben sich zum populärsten Modelltyp für
+     Aufgaben des maschinellen Lernens entwickelt, beispielsweise
+     Bildklassifikation, Segmentierung, Video- und Audioverständnis oder
+     Zeitreihenvorhersage. Mit immer weiter wachsenden Rechenressourcen sowie
+     Fortschritten in der verfügbaren Softwareinfrastruktur vergrößern sich die
+     trainierbaren Modelle immer weiter. Nichtsdestoweniger ist es nicht
+     unüblich, dass das Training eines Modells Tage oder Wochen in Anspruch
+     nimmt, selbst auf hochleistungsfähiger Hardware. Es gibt offensichtliche
+     Gründe -- zum Beispiel die Schwierigkeit, das Training mit den
+     erfolgreichsten Algorithmen zu parallelisieren -- gibt es möglicherweise
+     weitere Effizienzverluste durch fehlendes Verständins der
+     Trainingsdynamiken, was durch teure Parametersuche umgangen wird.
 
-    Künstliche neuronale Netze sind inzwischen die populärste Art von Modell für
-    viele Anwendungen im maschinellen Lernen, z.B. Bildklassifikation,
-    Segmentierung oder Video- und Audioanalyse sowie Zeitreihenvorhersage.  Mit
-    immer zunehmenden Ressourcen und Fortschritten in verfügbarer Software
-    steigt auch die Größe der Trainierbaren Modelle. Dennoch sind
-    Trainingszeiten von Tagen und Wochen -- selbst auf potenter Hardware --
-    nicht ungewöhnlich.
+     Der pragmatische Ansatz, die Black Box des Deep Learning zu öffnen, ist das
+     Experimentieren und Beobachten. Forscher führen Experimente durch, um
+     Einsichten in den Trainingsprozess zu erhalten, welche dann verwendet
+     werden können, um das Training zu leiten. Die Geschwindigkeit, mit der
+     solche Experimente durchgeführt werden können, hängt auch von den verfügbaren
+     Werkzeugen ab.
 
-    Es gibt naheliegende Ursachen -- z.B. die Schwierigkeit, das Training zu
-    parallelisieren aufgrund der eingesetzten Optimierungsalgorithmen -- jedoch
-    möglicherweise auch weninger offensichtliche Verluste in der Art und Weise,
-    wie Modelle normalerweise trainiert werden.
-
-    Während der praktische Erfolg tiefer neuronaler Netze rapide war, konnte die
-    theoretische Erschließung nicht Schritt halten, und viele fortschrittliche
-    Ideen sind mehr von Intuition und Experimenten gestützt als von rigorosen
-    Formalismen.  Für die meisten erfolgreichen Ideen haben wir folglich kein
-    klares Verständnis dafür, warum sie in der Praxis gut funktionieren.
-
-    Diese Kluft zwischen Praxis und Theorie ist auch ursächlich dafür, dass
-    Deep-Learning-Applikationen mehr als Kunst denn als Wissenschaft gelten.
-    Anders als in der traditionellen Softwareentwicklung, die auf Jahrzenten der
-    Forschung in Ingenieurswissenschaften, Mathematik und theoretischer
-    Informatik basiert, gibt es im maschinellen Lernen oft keinen definitiven
-    Ansatz, um ein konkretes Problem zu lösen. Des Weiteren sind die verfügbaren
-    Debugging-Werkzeuge in jeder Schicht der Softwareentwicklung denen des Deep
-    Learning bei weitem überlegen. Einfache Fragen wie ``Lernt das Modell das,
-    was ich möchte?'' sind bislang nicht zu beantworten. Wir können hier also
-    eine Notwendigkeit für mehr nützliche Tools für Anwender konstatieren.
-
-    Der Standardweg, eine gute Parameterwahl für das Modell zu treffen, ist
-    Trial-and-Error oder etwas intelligentere Variationen davon. Der
-    Rechenaufwand für das Training großer Modelle verhindert schnelles
-    Experimentieren und schlägt sich häufig auch in finanziellen Kosten für die
-    nötige Rechenleistung nieder.  Frühzeitig Sackgassen zu identifizieren oder
-    Zeitpunkte, an denen man bestimmte Parameter ändern sollte, könnten daher
-    große Ersparnisse bedeuten.
-
-    Diese Arbeit stellt zum Einen eine Softwarebibliothek vor, die im Debugging
-    von Deep-Learning-Anwendungen hilft und das Experimentieren erleichtert. Zum
-    Anderen wird dieses Werkzeug benutzt, um experimentell festzustellen, ob aus
-    dem Trainingsprozess Signale extrahiert werden können, die Aufschluss über
-    die Wahl von Parametern geben, während das Training läuft.
+     Diese Arbeit stellt eine Softwarebibliothek vor, die das Experimentieren
+     mit Online-Metriken vereinfacht, welche letztendlich das Training
+     beschleunigen könnten. Jene Bibliothek kann dann auch verwendet werden,
+     gefundene Metriken live für beliebige Modelle zu überwachen. Die Software
+     wird weiterhin verwendet, um solcherlei bisher unerforschte Metriken für
+     eine Auswahl an Problemen zu erarbeiten. Zuletzt werden unter Zuhilfenahme
+     der Software bekannte Resultate und Behauptungen validiert, um die
+     Nützlichkeit für Unterschungen im Deep Learning zu demonstrieren.
 
 \end{otherlanguage}
