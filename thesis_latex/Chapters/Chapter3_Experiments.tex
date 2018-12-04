@@ -31,28 +31,17 @@ the training. A more thorough evaluation of the results on realistic
 architectures and problem sizes would require significantly more time and
 computational resources and is left for future work.
 
-\section{Experimental Methodology}%
-\label{sec:experimental_methodology}
+\section{Review: Stochastic Gradient Descent}%
+\label{sec:review_stochastic_gradient_descent}
 
-For all experiments, \texttt{ikkuna} is used for recording various metrics
-during training without having to adapt to any specific model. Experiments are
-run on a Google Cloud virtual instance with $4$ Intel Xeon CPUs and Nvidia Tesla
-K80 graphics cards with 11gb of video memory. The information captured by
-\texttt{ikkuna} during training is logged to a MongoDB schemaless database with
-the help of the \texttt{sacred} library. The data can then be analysed off-line
-with MongoDB's Python interface. Plots are created with \texttt{matplotlib} and
-\texttt{seaborn}.
-
-\section{Detecting Learning Rate Problems}%
-\label{sec:detecting_learning_rate_problems}
-
-\subsection{Ratio-Adaptive Learning Rate Scheduling}%
-\label{sub:ratio_adaptive_learning_rate_scheduling}
-
-The first problem to be investigated is that of choosing an appropriate learning
-rated. We begin with a brief review of gradient descent and then evaluate how
-the update-to-weight ratio of model weights can be used to identify bad learning
-rates or automate learning rate selection.
+In this section, we briefly survey the stochastic gradient descent algorithm.
+This algorithm is used (in some variant) for virtually all practical deep
+learning models. The name derives from the fact that the model parameters are
+updated in the direction of the negative gradient, which is the high-dimensional
+derivative of the scalar loss function with respect to the model parameters. It
+is stochastic as it only uses a subset of the training data at every time step
+and thus only approximates the true gradient which would have to be computed
+over the entire dataset to be learned.
 
 In standard stochastic gradient descent, a loss $J$ of some the
 model parameters $\boldsymbol\theta$ (here, the layer weights) is computed over the training set of $m$
@@ -80,9 +69,33 @@ modifications to the vanilla update rule are the use of momentum
 throughout training, or adapting the
 learning rate based on mean and variance of gradients across past time steps
 \citep{kingma2014adam}. Nevertheless, most of the time, training begins with an
-arbitrarily chosen small learning rate around $0.01$ which is then adapded
+arbitrarily chosen small learning rate around $0.001$ which is then adapded
 either by the aforementioned mechanisms or by search over the parameter space on
 a subset of the training data when computationally feasible.
+
+
+\section{Experimental Methodology}%
+\label{sec:experimental_methodology}
+
+For all experiments, \texttt{ikkuna} is used for recording various metrics
+during training without having to adapt to any specific model. Experiments are
+run on a Google Cloud virtual instance with betwen $4$ and $8$ Intel Xeon CPUs
+and $1$ to $2$  Nvidia Tesla K80 graphics cards with $11$ GB of video memory. The
+information captured by \texttt{ikkuna} during training is logged to a MongoDB
+schemaless database with the help of the \texttt{sacred} library. The data can
+then be analysed off-line with MongoDB's Python interface. Plots are created
+with \texttt{matplotlib}. % and \texttt{seaborn}.
+
+\section{Detecting Learning Rate Problems}%
+\label{sec:detecting_learning_rate_problems}
+
+\subsection{Ratio-Adaptive Learning Rate Scheduling}%
+\label{sub:ratio_adaptive_learning_rate_scheduling}
+
+The first problem to be investigated is that of choosing an appropriate learning
+rated. We begin with a brief review of gradient descent and then evaluate how
+the update-to-weight ratio of model weights can be used to identify bad learning
+rates or automate learning rate selection.
 
 As a first hypothesis, we investigate a claim made by \citet{karpathycs231n} who
 states that the ratio between updates and weights is a quantity which should be
@@ -307,36 +320,168 @@ training. This could help us improve the learning rate schedule developed above
 and refine the use of the UW ratio as a signal for inappropriate learning rates.
 
 For this experiment, we learn CIFAR-10 for $75$ epochs, again with a batch size
-of $128$, with vanilla SGD and different learning rates. We use the AlexNetMini
-architecture again, as well as a larger, more powerful VGG network (schema in
-\cref{fig:vgg16}). We employ \verb+ikkuna+ to record losses, accuracies and UW
-ratios for each layer automatically during training. In order to mage larger
-trends visible, we smooth the loss trace with a gaussian kernel.
+of $128$, with vanilla SGD and the Adam optimizer and different learning rates.
+We use the AlexNetMini architecture again, as well as a larger, more powerful
+VGG network (schema in \cref{fig:vgg16}). We employ \verb+ikkuna+ to record
+losses, accuracies and UW ratios for each layer automatically during training.
+In order to make larger trends visible, we smooth the loss trace with a gaussian
+kernel.
+
+In the following figures, we plot the loss traces and their inverse derivative
+(the amount of decrease) in the upper right, the average weight-update ratio in
+the lower right, and a scatterplot of ratio versus loss decrease on the left.
+The scatterplot has the time step colour-coded (blue is early, red is late) and
+in addition offsets according to time on the $z$-axis. Due to the number of
+points (up to $30.000$ time steps times the number of runs), the plots have been
+subsampled where many points overlap. This was necessary to render the data for
+this document. Care has been taken to not destroy the topology of the data.  The
+density in a given area may thus not be entirely accurate. In the UW ratio
+plots, the different shades represent different training runs.
 
 \subsubsection*{VGG}
 
-In \cref{fig:ratio_loss_corr_vgg_sgd_001,fig:ratio_loss_corr_vgg_sgd_005,fig:ratio_loss_corr_vgg_sgd_01}
-we plot the loss traces and their inverse derivative (the amount of decrease) in
-the upper right, the average weight-update ratio in the lower right, and a
-scatterplot of ratio versus loss decrease on the left.
+The plots in for this network only show the first $15.000$ training steps since
+nothing of note happens afterwards. Since most of the ratio values cluster
+around the same values towards the end of training, logarithmic subsampling was
+applied.  For the VGG network, we observe a smooth decrease in the training loss
+alonside a decrease in the average update-to-weight ratio. Training basically
+stalls after around $10.000$ steps (about $25$ epochs).  We observe the trend
+that the UW ratio is initially fairly high and falls off subsequently, which
+correlates with a decrease in loss. However, there is no particular value of the
+ratio that exhibits any significant correlations beyond other values. The
+ratio in the beginning of training is also proportional to the learning rate, as
+is to be expected.
+
+It is curious that in the very beginning of training, the UW ratio has the
+highest value, but the decrease in loss for these steps increases throughout the
+first few batches (i.e. learning accelerates) before tapering off. This is
+barely visible in the line plots, but shows as a prominent feature in the
+scatterplot. It should be noted that this phenomenon happens on a very small
+timescale -- the number of data points in the arc is orders of magnitude smaller
+than in the rest of the plot. As a preliminary conlcusion, we can affirm that
+there is no linear correlation between the ratio and the decrease in loss.
+
+Furthermore, the smallest of the evealuated learning rates converges fastest.
+The loss flatlines at $0$ after little more than $4000$ steps while the larger
+learning rates need proportionally more time. The difference is marginal
+however. The phenomenon might relate to the motivation for annealing the
+learning rate: As we approach a local minimum, we need smaller learning rates to
+not jump over it in a different direction in every update, but slowly fall into
+the minimum itself. This may be an indication that an appropriate learning rate
+for this particular problem is $\le 0.01$
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001.png}
-    \caption{Experimental Results for VGG with SGD and learning rate $0.01$}
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001.pdf}
+    \caption{UW ratio experiment for VGG with SGD and learning rate $0.01$}
     \label{fig:ratio_loss_corr_vgg_sgd_001}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005.png}
-    \caption{Experimental Results for VGG with SGD and learning rate $0.05$}
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005.pdf}
+    \caption{UW ratio experiment for VGG with SGD and learning rate $0.05$}
     \label{fig:ratio_loss_corr_vgg_sgd_005}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01.png}
-    \caption{Experimental Results for VGG with SGD and learning rate $0.1$}
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01.pdf}
+    \caption{UW ratio experiment for VGG with SGD and learning rate $0.1$}
     \label{fig:ratio_loss_corr_vgg_sgd_01}
 \end{figure}
+
+The same experiment has been run with the Adam optimizer \citep{kingma2014adam}
+and has been found to produce quite different results. We mainly observe that
+the steplike nature of the loss function (sharp decreases at epoch boundaries)
+do not occur with the Adam optimizer. This removes the loops  which we see for
+SGD from the scatterplots. In absolute terms, Adam begets a much higher UW ratio
+in the beginning of training, which falls off quickly to SGD's values.
+Convergence takes much longer, never truly reaching $0$ training loss.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$}
+    \label{fig:ratio_loss_corr_vgg_adam_001}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$}
+    \label{fig:ratio_loss_corr_vgg_adam_005}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$}
+    \label{fig:ratio_loss_corr_vgg_adam_01}
+\end{figure}
+
+Remarkably, the qualitative behaviour is the opposite SGD, which becomes visible
+when omitting the first few hundred training steps. While for SGD (plots omitted
+for brevity), higher learning rates lead to higher initial values in the UW
+distribution, the opposite seems to hold for the adaptive optimizer. This can be
+seen in
+\cref{fig:ratio_loss_corr_vgg_adam_001_500,fig:ratio_loss_corr_vgg_adam_005_500,fig:ratio_loss_corr_vgg_adam_01_500}
+where the first $500$ training steps are ommitted to avoid squishing the
+scatterplot because of the quickly decaying arcs in the beginning of training.
+A possible explanation is that Adam uses estimates of the mean and variance of
+gradients, and possibly overcorrects the learning rate. We will investigate Adam
+more closely in \cref{sec:adam}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001_500_29250.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$,
+    beginning at step $500$}
+    \label{fig:ratio_loss_corr_vgg_adam_001_500}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005_500_29250.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$,
+    beginning at step $500$}
+    \label{fig:ratio_loss_corr_vgg_adam_005_500}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01_500_29250.pdf}
+    \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$,
+    beginning at step $500$}
+    \label{fig:ratio_loss_corr_vgg_adam_01_500}
+\end{figure}
+
+\subsubsection*{Other Architectures}
+
+Several analyses were conducted on the data, but not displayed here due to
+inconclusive results.
+The experiments were run on the AlexNetMini architecture as well, without
+results, as the network does not converge within $75$ epochs.
+The same experiment on the ResNet18 architecture exhibited the same qualitative
+behaviour as the VGG network, except for a larger variance in loss decreases for
+a given ratio value. Slicing the training into pieces and graphing every slice
+of $5000$ training steps separately reveals nothing beyond a decrease in
+absolute value of ratio and loss, which is expected. Any correlations between
+the two quantities do not change after the initial few steps.
+
+The results from all these experiments do not demonstrate that a ratio value
+of $0.001$ is any more significant than others. While it is intuitive that the loss
+can only decrease significantly if the weights change accordingly (unless the
+loss surface is extremely rough), we find no particular insights as to what
+ratio is appropriate for any given point in training.
+
+We now want to check how the UW ratio relates to the loss when we attempt to
+artificially fix the ratio value to a target of $0.01$. Since the updates to the
+weights in vanilla SGD (see \cref{sec:review_stochastic_gradient_descent}) are a
+function of the learning rate and the gradient magnitude, this could be done in
+one of two ways
+\begin{enumerate}
+    \item Scale the gradients with the constant learning rate in mind
+    \item Set the learning rate according to the ratio-adaptive schedule from
+        \cref{sub:ratio_adaptive_learning_rate_scheduling}
+\end{enumerate}
