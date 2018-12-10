@@ -11,23 +11,23 @@ is considered more of an art than a science. In contrast to traditional
 programming, which builds on decades of reasearch and development in electrical
 engineering, logic, mathematics and theoretical computer science, there's rarely
 one definitive way to solve a certain problem in deep learning.  Additionally,
-the debugging tools available to every programmer on every level of abstraction
-far exceed what we currently have for differentiable programming. Simple
-questions like ``Does my model learn what I want it to learn?'' are not
+the quality of debugging tools available to a programmer on every level of
+abstraction far exceeds what we currently have for differentiable programming.
+Simple questions like ``Does my model learn what I want it to learn?'' are not
 answerable at this point.  We can thus identify a need to supply more useful
-tooling for deep learning practitioners.  A standard approch to choosing a
-parametrization remains trial-and-error, or only slighty more sophisticated ways
-to run and test.  The computational cost of training large models prohibits
-quick experimentation and often translates into monetary costs as well.
-Identifying dead ends early or points in training at which to tweak certain
-parameters could thus provide large savings in time and money, besides enabling
-a more thorough understanding of what is going on.
+tooling for deep learning researchers and practitioners.  A standard approch to
+choosing a parametrisation remains trial-and-error, or only somewhat more
+sophisticated ways to run and test.  The computational cost of training large
+models prohibits quick experimentation and often translates into monetary costs
+as well.  Identifying dead ends early or points in training at which to tweak
+certain parameters could thus provide large savings in time and money, besides
+enabling a more thorough understanding of what is going on inside the pile of
+linear algebra that is a deep learning model.
 
 This thesis addresses the above in two ways: A software library aiding in deep
-learning debugging and experimentation is designed and implemented. The same
+learning debugging and experimentation is designed, implemented and documentted. The same
 library is then used to investigate experimentally whether unexplored
-metrics can be devised for optimising the training process, potentially while it
-is running.
+metrics can be devised for optimising parameters of the training process while it is running.
 
 This thesis is concerned with \emph{deep} neural networks, meaning
 architectures consisting of many layers. Typically, the number of units
@@ -44,22 +44,23 @@ research. An overview of the workings of a neural network is given in
 \section{Artificial Neural Networks}\label{sec:anns}}
 
 The artificial neural network is a class of machine learning model which can be
-used for regression and classification.  At its core, neuronal models are simply
-conceptualized as an arrangement of units which receive inputs, compute a
-weighted sum and thus produce an output activation. The ideas date back at least
-to Hebbian learning (a single neuron) in the 1940s, and were developed into the
-Perceptron model by Rosenblatt \citep{Rosenblatt58theperceptron}. With the
-introduction of the backpropagation algorithm \citep{werbos1975beyond} and
-increasing availability of computing power, this began to change, but more
-easily trainable models like Support Vector machines eclipsed neural nets for
-most applications.  Architectural advances, such as the convolutional neural
-networks in the late 1980's \citep{LeCun:1989:BAH:1351079.1351090} and the
-advent of GPU-accelerated neural network implementations (pioneered in
-\cite{Ciresan11flexible}) -- as well as subsequently, gpu-accelerated linear
-algebra libraries with automatic differentiation -- finally made neural networks
-the cornerstone for many AI applications today.
+used for regression, classification, generation and a host of other tasks.  At
+its core, neuronal models are simply conceptualised as an arrangement of units
+which receive numerical inputs, compute a weighted sum and thus produce an output
+activation. The ideas date back at least to Hebbian learning (a single neuron)
+in the 1940s, and were developed into the Perceptron model by
+\citet{Rosenblatt58theperceptron}. With the introduction of the backpropagation
+algorithm \citep{werbos1975beyond} and increasing availability of computing
+power, this began to change, but more easily trainable models like Support
+Vector machines eclipsed neural nets for most applications.  Architectural
+advances, such as the convolutional neural networks in the late 1980s
+\citep{LeCun:1989:BAH:1351079.1351090} and the advent of GPU-accelerated neural
+network implementations (pioneered in \cite{Ciresan11flexible}) -- as well as
+subsequently, gpu-accelerated linear algebra libraries with automatic
+differentiation -- finally made neural networks the workhorse for many AI
+applications today.
 
-A neural network consist of at least one input layer, \(0-n\)
+A neural network consists of at least one input layer, \(0-n\)
 intermediate layers and at least one output layer. Data is processed in
 numerical form by multiplying it with the input layer's weights, mapping
 each product with the input layer's activation function and then
@@ -78,6 +79,13 @@ multi-layer feedforward network.
     }
 \end{figure}
 
+Training a neural network simply involves a loss function measuring the distance
+of the networks output to the desired output and differentiating it with respect
+to the model parameters. The backpropagation algorithm provides an efficient way
+of computing all the partial derivatives of the loss with respect to each
+parameter (network weight). Parameters are usually updated with some form of the
+gradient descent optimisation algorithm.
+
 \hypertarget{sec:thesis-goals}{%
 \section{Goals of this thesis}\label{sec:thesis-goals}}
 
@@ -86,7 +94,8 @@ The objective of this work is twofold:
 \begin{enumerate}
     \item
         Create a software library that enables easy and reusable
-        implementation of training metrics
+        implementation of training metrics and abstracts away the concrete model
+        arichtecture
     \item
         Perform experiments on common datasets to investigate whether common
         problems in neural network training can be detected by the use of
@@ -94,31 +103,35 @@ The objective of this work is twofold:
         not limited to
         \begin{itemize}
             \item
-                bad initializations
-            \item
                 inappropriate learning rate
             \item
                 layer/model saturation
             \item
+                bad initialisations
+            \item
                 inappropriate network architecture
             \item
-                bad generalization/overfitting
+                bad generalisation/overfitting
         \end{itemize}
 \end{enumerate}
 
 \hypertarget{sec:motivation}{%
 \section{Motivation}\label{sec:motivation}}
 
-In contrast to classical machine learning models, training deep neural networks requires navigating a huge parameter
-space. While most non-neural regression or classification algorithms only require specification of a parameter set
-up-front and often no more than a few, some parameters can (and should) be varied over training time for neural
-networks. Looking at the popular scikit-learn library, it can be seen that traditional methods such as SVMs, Gaussian
-Processes, Decision Trees or Gradient Boosting typically require less than 10 algorithmic parameters.
-\footnote{A look through \href{http://scikit-learn.org/stable/supervised_learning.html\#supervised-learning}{scikit-learn}s
-selection of regressors and classifiers shows most classes require between 5 and 10 parameters. \citep{scikit-learn}}
+In contrast to classical machine learning models, training deep neural networks
+requires navigating a huge parameter space. While most non-neural regression or
+classification algorithms only require specification of a parameter set up-front
+and often no more than a few, some parameters can (and should) be varied over
+training time for neural networks. Looking at the popular scikit-learn library \citep{scikit-learn},
+it can be seen that traditional methods such as SVMs, Gaussian Processes,
+Decision Trees or Gradient Boosting typically require less than $10$
+hyperparameters\footnote{A look through
+\href{http://scikit-learn.org/stable/supervised_learning.html\#supervised-learning}{scikit-learn}s
+selection of regressors and classifiers shows most classes require between 5 and
+10 parameters.}.
 
-In neural networks the parameter space can have arbitrarily many dimensions when factoring in the fact that some
-parameters can change over time, such as
+In neural networks the parameter space can have arbitrarily many dimensions when
+factoring in the fact that some parameters can change over time, such as
 
 \begin{itemize}
     \item
@@ -127,109 +140,142 @@ parameters can change over time, such as
         batch size\footnote{It is not usual to change the batch size during
             training, but it can have an effect similar annealing the learning
         rate (see \cite{DBLP:journals/corr/abs-1711-00489})}
-        \item
-            trainability of layers
-    \end{itemize}
+    \item
+        trainability of layers (not all layers need to be trained throughout the
+        entire training)
+\end{itemize}
 
-    Other parameters that need to be set initially are
+Other parameters that need to be set initially are
 
-    \begin{itemize}
-        \item
-            Network architecture (how many layers, how many units per layer)
-        \item
-            nonlinearity function
-        \item
-            type of loss
-        \item
-            optimization algorithm
-        \item
-            initial learning rate
-        \item
-            momentum
-        \item
-            weight decay
-    \end{itemize}
+\begin{itemize}
+    \item
+        Network architecture (how many layers, how many units per layer,
+        what kind of layers)
+    \item
+        nonlinearity function for each layer
+    \item
+        loss function
+    \item
+        optimisation algorithm
+    \item
+        initial learning rate
+    \item
+        momentum of the weight updates
+    \item
+        weight decay
+    \item
+        Regularisation methods for the weights
+\end{itemize}
 
-    This makes finding an optimal training regimen very hard, particularly
-    since training deep neural networks for realistic problems can take much
-    longer than traditional methods, meaning cross-validating different
-    models can be prohibitively expensive. It is therefore desirable to
-    notice dead ends early during training, or be able to tweak parameters
-    in such a way as to maximize convergence speed.
+This makes finding an optimal training regimen very hard, particularly since
+training deep neural networks for realistic problems can take much longer than
+traditional methods, meaning cross-validating different models can be
+prohibitively expensive. It is therefore desirable to notice dead ends early
+during training, or be able to tweak parameters in such a way as to maximise
+convergence speed.
 
-    This thesis work is motivated by the scarcity of useful tools to debug
-    and monitor deep learning training. Without years of training and a lot
-    of mathematical intuition and expertise, it is often very hard to figure
-    out why a network isn't learning or how to ensure timely convergence.
-    And even with this expertise, visualizations or metrics need to be
-    implemented over and over again because common tools do not abstract
-    from the concrete model architecture.
+This thesis work is motivated by the scarcity of useful tools to debug and
+monitor deep learning training. \citet{arpteg2018software} discuss several
+challenges arising in the context of engineering larger-scale machine learning
+software and note that a lack of useful debugging tools can lead to a lot of
+wasted time and money in diagnosing problematic behaviour of a neural network.
 
-    There exist a some of monitoring tools (see \cref{sec:existing-apps}),
-    but they are mostly low-level tools which provide visualization
-    primitives (drawing and interacting with graphs). They may enable
-    visualization of certain network metrics on top of the primitives, but
-    There is no native support for a concept such as \emph{Maximum singular
-    value of the weight matrix} which can be simply applied automatically to
-    all layers.
+Without years of training and a lot of
+mathematical intuition and expertise, it is often very hard to figure out why a
+network is not learning or how to ensure timely convergence.  And even with this
+expertise, visualisations or metrics need to be implemented over and over again
+because common tools do not abstract from the concrete model architecture.
+Providing easy-to-use tooling and live insights also has the side-effect of
+democratising access to machine learning software. Ideally, the metrics created
+with the help of this work would enable non-experts to better understand their
+models and reduce the dependence on rare machine learning expertise. While this
+goal will likely not be achieved by this work alone, steps in the general
+direction are needed for disseminating AI advances throughout the industry, and
+counteract the tendency of large companies to reap the majority of the benefits
+brought about by deep learning.
 
-    In contrast, the library developed in this work is geared towards
-    modularizing introspection metrics in such a way that they are usable
-    for any kind of model, without modifications to the model code. The
-    secondary purpose of the library is the enablement to quickly iterate on
-    hypothesized metrics extracted from the training in order to diagnose
-    problems such as those outlined in \cref{sec:thesis-goals}
+There exist a some of monitoring tools (see \cref{sec:existing-apps}), but they
+are mostly low-level tools which provide visualisation primitives (drawing and
+interacting with graphs). They may enable visualisation of certain network
+metrics on top of the primitives, but there is no native support for a concept
+such as \emph{Maximum singular value of the weight matrix} which can be simply
+applied automatically to all layers.
 
-    As such, the library shall not only be useful to end users who will make
-    use of established metrics and thus save time in their model training,
-    but also to researchers and the author of this thesis in for evaluating
-    hypotheses about training metrics.
+In contrast, the library developed in this work is geared towards modularising
+introspection metrics in such a way that they are usable for any kind of model,
+without modifications to the model code. The secondary purpose of the library is
+the enablement to quickly iterate on hypothesised metrics extracted from the
+training in order to diagnose problems such as those outlined in
+\cref{sec:thesis-goals}. Most deep learning research involves experiments on a
+variety of architectures, datasets, and hyperparameter sets in order to validate
+an idea. All of these experiments must be implemented, which can easily lead to
+haphazard duplication of code for all the different settings, or creation of
+ad-hoc libraries that are only used in this specific work. Thus, a lot of effort
+is wasted due to the lack of more general tools and the fact that code produced
+for research often is not made public, or would require significant effort to
+generalise to other problems.
 
-    \hypertarget{sec:existing-apps}{%
-    \section{Existing Applications}\label{sec:existing-apps}}
+As such, the library shall not only be useful to end users who will make use of
+established metrics and thus save time in their model training, but also to
+researchers and the author of this thesis in evaluating hypotheses about
+training metrics.
 
-    \hypertarget{tensorboard}{%
-    \subsection*{TensorBoard}\label{tensorboard}}
+In summary, this library is supposed to be both a developer tool, reducing
+implementation effort, decreasing opacity of the training process and a research tool for
+abstracting away some of the nuisances of machine learning experimentation and
+simplifying experiments for live metrics in neural networks.
 
-    TensorBoard is a visulization toolkit originally developed for the TensorFlow \citep{tensorflow2015-whitepaper} deep
-    learning framework. It is composed of a Python library for exporting data from the training process and a web server
-    which reads the serialized data and displays it in the browser. The server can be used independently from
-    TensorFlow, provided the data is serialized in the appropriate format. This enables, e.g., a PyTorch port, termed
-    TensorBoardX.
+\hypertarget{sec:existing-apps}{%
+\section{Existing Applications}\label{sec:existing-apps}}
 
-    For exporting data during training, the developer adds operations to the
-    graph which write scalars, histograms, audio, or other data
-    asynchronously to disk. This data can then be displayed in approximately
-    real-time in the web browser. Besides scalar-valued functions, which
-    could be e.g.~the loss curve or accuracy measure, TensorBoard supports
-    histograms, audio, and embedding data natively. However, concrete
-    instances of these classes of training artifact must be defined by the
-    user and can only be reused if the developer creates a separate library
-    for the computations involved.
+There exist a variety of libraries for machine learning visualisation which we
+will briefly survey in this section.
 
-    New kinds of visualizations can be added with plugins, which require not
-    only writing the Python code exporting the data and for serving it from
-    the web server, but also JavaScript for actually displaying it (the
-    Polymer library is used for this\footnote{\url{https://www.polymer-project.org/}}).
+\hypertarget{tensorboard}{%
+\subsection*{TensorBoard}\label{tensorboard}}
 
-    An attempt to abstract over the the programming language for talking to
-    the server is \href{https://github.com/torrvision/crayon}{Crayon} which
-    so far supports Python and Lua.
+TensorBoard is a visulisation toolkit originally developed for the TensorFlow
+\citep{tensorflow2015-whitepaper} deep learning framework. It is composed of a
+Python library for exporting data from the training process and a web server
+which reads the serialised data and displays it in the browser. The server can
+be used independently from TensorFlow, provided the data is serialised in the
+appropriate format. This enables, e.g., a PyTorch port, termed TensorBoardX.
 
-    \hypertarget{visdom}{%
-    \subsection*{Visdom}\label{visdom}}
+For exporting data during training, the developer adds operations to the
+graph which write scalars, histograms, audio, or other data
+asynchronously to disk. This data can then be displayed in approximately
+real-time in the web browser. Besides scalar-valued functions, which
+could be e.g.~the loss curve or accuracy measure, TensorBoard supports
+histograms, audio, and embedding data natively. However, concrete
+instances of these classes of training artifact must be defined by the
+user and can only be reused if the developer creates a separate library
+for the computations involved. TensorBoard or TensorFlow also have no built-in
+way of intelligently discovering the model structure to automatically add
+visualisations of every layer with a higher-level API.
 
-    Visdom by Facebook Research fulfills more or less the same purpose as
-    TensorBoard, but supports Numpy and Lua Torch. In contrast to
-    TensorBoard, Visdom includes more features for organizing the display of
-    many visualizations at once. Still, the framework is mostly geared
-    towards improving workflows for data scientists, and is not concerned
-    with providing useful metrics out-of-the-box.
+New kinds of visualisations can be added with plugins, which require not
+only writing the Python code exporting the data and for serving it from
+the web server, but also JavaScript for actually displaying it (the
+Polymer library is used for this\footnote{\url{https://www.polymer-project.org/}}).
 
-    \hypertarget{others}{%
-    \subsection*{Others}\label{others}}
+An attempt to abstract over the the programming language for talking to
+the server is \href{https://github.com/torrvision/crayon}{Crayon} which
+so far supports Python and Lua.
 
-    There are other tools such as
-    \href{http://yosinski.com/deepvis}{DeepVis} for offline introspection,
-    which offer insights into the training after the fact, but do not help
-    guiding the training process while it's running.
+\hypertarget{visdom}{%
+\subsection*{Visdom}\label{visdom}}
+
+Visdom by Facebook Research fulfills more or less the same purpose as
+TensorBoard, but supports Numpy and Lua Torch. In contrast to
+TensorBoard, Visdom includes more features for organising the display of
+many visualisations at once. Still, the framework is mostly geared
+towards improving workflows for data scientists, and is not concerned
+with providing useful metrics out-of-the-box.
+
+\hypertarget{others}{%
+\subsection*{Others}\label{others}}
+
+There are other tools such as
+\href{http://yosinski.com/deepvis}{DeepVis} for offline introspection,
+which offer insights into the training after the fact, but do not help
+guiding the training process while it's running.

@@ -107,21 +107,26 @@ celebrity of the proponent, this merits further investigation.
 It seems intuitive that this target cannot be static throughout training, since
 we usually decay the learning rate towards the end, leading to smaller magnitude
 of updates (this is a prerequisite for theoretical convergence guarantees for
-SGD, see \citet[p. 20]{saad1998online}). It is also not clear whether the target
-should apply to all layers equally. For instance, in networks with the (now
-outdated) tanh activation function, the later layer's gradients are larger as
-fewer backpropagation steps have been done to them, and for this activation
-function at least, each application of the chain rule entails mutliplication
-with a factor $< 1$ (as the tanh derivative never exceeds $1$ and decreases to
-almost $0$ in both limtis), so gradients become exponentially small. In fact,
-the vanishing gradient problem was the main driver to introduce non-saturating
-activation functions.  Other nonlinearites such as the rectified linear unit do
-not exhibit the same behaviour, but that does not mean all layers must change at
-the same rate.
+SGD, see \citet[p. 20]{saad1998online}). As a matter of fact, this can be easily
+verified by running training with an update rule that scales each gradient so
+that the update hits the target (the network does learn, but much slower and to
+smaller final accutacy; plots are omitted for brevity). It is also not clear
+whether the target should apply to all layers equally. For instance, in networks
+with the (now outdated) tanh activation function, the later layer's gradients
+are larger as fewer backpropagation steps have been done to them, and for this
+activation function at least, each application of the chain rule entails
+mutliplication with a factor $< 1$ (as the tanh derivative never exceeds $1$ and
+decreases to almost $0$ in both limtis), so gradients become exponentially
+small. In fact, the vanishing gradient problem was the main driver to introduce
+non-saturating activation functions.  Other nonlinearites such as the rectified
+linear unit do not exhibit the same behaviour, but that does not mean all layers
+must change at the same rate.
 
 As a first approach to an evaluation, we want to try and select the learning
 rate in such a way as to hit the target postulated by
-\citeauthor{karpathycs231n}.
+\citeauthor{karpathycs231n}, but not precisely for each layer, but on average
+over all layers. This would allow for more flexibility in the weight updates
+compared to fixing each update to the same value.
 
 The experimental setup uses the simplified AlexNet architecture
 (\cref{sec:pack-models}) shown in \cref{fig:alexnetmini}. The dataset used is
@@ -336,11 +341,11 @@ points (up to $30.000$ time steps times the number of runs), the plots have been
 subsampled where many points overlap. This was necessary to render the data for
 this document. Care has been taken to not destroy the topology of the data.  The
 density in a given area may thus not be entirely accurate. In the UW ratio
-plots, the different shades represent different training runs.
+plots, the line displayed is the average over multiple runs.
 
 \subsubsection*{VGG}
 
-The plots in for this network only show the first $15.000$ training steps since
+The plots in for this network only show the first $10.000$ training steps since
 nothing of note happens afterwards. Since most of the ratio values cluster
 around the same values towards the end of training, logarithmic subsampling was
 applied.  For the VGG network, we observe a smooth decrease in the training loss
@@ -358,8 +363,9 @@ first few batches (i.e. learning accelerates) before tapering off. This is
 barely visible in the line plots, but shows as a prominent feature in the
 scatterplot. It should be noted that this phenomenon happens on a very small
 timescale -- the number of data points in the arc is orders of magnitude smaller
-than in the rest of the plot. As a preliminary conlcusion, we can affirm that
-there is no linear correlation between the ratio and the decrease in loss.
+than in the rest of the plot, therefore it is no more than a curiosity. As a
+preliminary conlcusion, we can affirm that there is no linear correlation
+between the ratio and the decrease in loss.
 
 Furthermore, the smallest of the evealuated learning rates converges fastest.
 The loss flatlines at $0$ after little more than $4000$ steps while the larger
@@ -368,59 +374,69 @@ however. The phenomenon might relate to the motivation for annealing the
 learning rate: As we approach a local minimum, we need smaller learning rates to
 not jump over it in a different direction in every update, but slowly fall into
 the minimum itself. This may be an indication that an appropriate learning rate
-for this particular problem is $\le 0.01$
+for this particular problem is $\le 0.01$. None of the configurations exhibit UW
+ratios close to Karpathy's suggestion of $10^{-3}$, but with the smallest
+learning rate, we get closest, and converge fastest. Perhaps this could motivate
+Karpathy's constant.
 
 \begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001.pdf}
-    \caption{UW ratio experiment for VGG with SGD and learning rate $0.01$}
-    \label{fig:ratio_loss_corr_vgg_sgd_001}
-\end{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with SGD and learning rate $0.01$}
+        \label{fig:ratio_loss_corr_vgg_sgd_001}
+    \end{subfigure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005.pdf}
-    \caption{UW ratio experiment for VGG with SGD and learning rate $0.05$}
-    \label{fig:ratio_loss_corr_vgg_sgd_005}
-\end{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with SGD and learning rate $0.05$}
+        \label{fig:ratio_loss_corr_vgg_sgd_005}
+    \end{subfigure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01.pdf}
-    \caption{UW ratio experiment for VGG with SGD and learning rate $0.1$}
-    \label{fig:ratio_loss_corr_vgg_sgd_01}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with SGD and learning rate $0.1$}
+        \label{fig:ratio_loss_corr_vgg_sgd_01}
+    \end{subfigure}
 \end{figure}
 
 The same experiment has been run with the Adam optimizer \citep{kingma2014adam}
 and has been found to produce quite different results. We mainly observe that
 the steplike nature of the loss function (sharp decreases at epoch boundaries)
-do not occur with the Adam optimizer. This removes the loops  which we see for
+are much less pronunced with the Adam optimizer. This removes the loops  which we see for
 SGD from the scatterplots. In absolute terms, Adam begets a much higher UW ratio
 in the beginning of training, which falls off quickly to SGD's values.
-Convergence takes much longer, never truly reaching $0$ training loss.
+Convergence takes minimally longer and doesn't occur at all with a learning rate
+of $0.1$ (\cref{fig:ratio_loss_corr_vgg_adam_01}). Counterintuitively, the
+adaptive optimiser is unable to adapt to the high learning rate and is
+outperformed by vanilly SGD.
 
 \begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$}
-    \label{fig:ratio_loss_corr_vgg_adam_001}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$}
+        \label{fig:ratio_loss_corr_vgg_adam_001}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$}
+        \label{fig:ratio_loss_corr_vgg_adam_005}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01_0_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$}
+        \label{fig:ratio_loss_corr_vgg_adam_01}
+    \end{subfigure}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$}
-    \label{fig:ratio_loss_corr_vgg_adam_005}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$}
-    \label{fig:ratio_loss_corr_vgg_adam_01}
-\end{figure}
-
-Remarkably, the qualitative behaviour is the opposite SGD, which becomes visible
+Remarkably, the qualitative behaviour is the opposite of SGD, which becomes visible
 when omitting the first few hundred training steps. While for SGD (plots omitted
 for brevity), higher learning rates lead to higher initial values in the UW
 distribution, the opposite seems to hold for the adaptive optimizer. This can be
@@ -433,27 +449,29 @@ gradients, and possibly overcorrects the learning rate. We will investigate Adam
 more closely in \cref{sec:adam}
 
 \begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001_500_29250.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$,
-    beginning at step $500$}
-    \label{fig:ratio_loss_corr_vgg_adam_001_500}
-\end{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_001_500_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.01$,
+        beginning at step $500$}
+        \label{fig:ratio_loss_corr_vgg_adam_001_500}
+    \end{subfigure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005_500_29250.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$,
-    beginning at step $500$}
-    \label{fig:ratio_loss_corr_vgg_adam_005_500}
-\end{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_005_500_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.05$,
+        beginning at step $500$}
+        \label{fig:ratio_loss_corr_vgg_adam_005_500}
+    \end{subfigure}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01_500_29250.pdf}
-    \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$,
-    beginning at step $500$}
-    \label{fig:ratio_loss_corr_vgg_adam_01_500}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_adam_01_500_10000.pdf}
+        \caption{UW ratio experiment for VGG with Adam and learning rate $0.1$,
+        beginning at step $500$}
+        \label{fig:ratio_loss_corr_vgg_adam_01_500}
+    \end{subfigure}
 \end{figure}
 
 \subsubsection*{Other Architectures}
@@ -476,7 +494,7 @@ loss surface is extremely rough), we find no particular insights as to what
 ratio is appropriate for any given point in training.
 
 We now want to check how the UW ratio relates to the loss when we attempt to
-artificially fix the ratio value to a target of $0.01$. Since the updates to the
+artificially fix the ratio value to a target of $0.001$. Since the updates to the
 weights in vanilla SGD (see \cref{sec:review_stochastic_gradient_descent}) are a
 function of the learning rate and the gradient magnitude, this could be done in
 one of two ways
@@ -485,3 +503,71 @@ one of two ways
     \item Set the learning rate according to the ratio-adaptive schedule from
         \cref{sub:ratio_adaptive_learning_rate_scheduling}
 \end{enumerate}
+
+Using the ratio-adaptive schedule results in the behaviour shown in
+\cref{fig:ratio_loss_corr_vgg_sgd_0001_adaptive,fig:ratio_loss_corr_vgg_sgd_001_adaptive,fig:ratio_loss_corr_vgg_sgd_01_adaptive}.
+In contrast to previous experiments, we also have a configuration with $0.001$
+learning rate, dropping the $0.05$ value. We also plot the learning rate caused
+by the scheduling over the UW ratio.
+
+Note that for this set of plots, the axis limits are different. This serves to
+illustrate that the qualitative behaviour is identical for all learning rates
+(ignoring the fast arc at the beginning for $\text{lr}=0.1$). The learning rate
+trajectories are very similar; the learning rate rises as the UW ratio
+decreases. The primary insight from these experiments is that the empirical UW ratio is
+not linearly related to the learning rate. Recall from
+\cref{sec:review_stochastic_gradient_descent} that the weight update is given by
+\begin{align}
+    \eta \nabla_{\boldsymbol\theta}J,
+\end{align}
+so it is a linear function of the learning rate and the gradient magnitude. We
+would therefore expect that a tenfold reduction in learning rate would result in
+an equal reduction in the UW ratio. However, the difference is not quite as
+pronounced in reality. Considering
+\cref{fig:ratio_loss_corr_vgg_sgd_001_adaptive} and
+\cref{fig:ratio_loss_corr_vgg_sgd_01_adaptive} we see the learning rate
+differing by a factor of $\sim{}5$, whereas the UW ratios only differ by a factor of
+$\sim{}2$. The cleft between reality and expectation is even more pronounced for
+learning rates $0.001$ and $0.1$. This hints at a qualitative difference between
+the paths through parameter space taken by higher vs. lower learning rates. If
+we assumed the directions are mostly the same, we would also expect the higher
+learning rate to traverse them quicker (entailing a larger weight change and
+thus a higher UW ratio, but possibly suffering from the usual problems of
+too-high learning rate). If instead the path taken by the higher learning rate
+is actually less steep than the one taken by the smaller rate, we could observe
+the phenomenen documented here.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_0001_0_11700_ratio_schedule.pdf}
+        \caption{UW ratio experiment for VGG with SGD and adaptive learning rate
+            from $0.001$}
+        \label{fig:ratio_loss_corr_vgg_sgd_0001_adaptive}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_001_0_11700_ratio_schedule.pdf}
+        \caption{UW ratio experiment for VGG with SGD and adaptive learning rate
+            from $0.01$}
+        \label{fig:ratio_loss_corr_vgg_sgd_001_adaptive}
+    \end{subfigure}
+
+    %% leave this as only 3 fit on one page
+    % \begin{subfigure}{\textwidth}
+    %     \centering
+    %     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_005_0_11700_ratio_schedule.pdf}
+    %     \caption{UW ratio experiment for VGG with SGD and learning rate adaptive
+    %         from $0.05$}
+    %     \label{fig:ratio_loss_corr_vgg_sgd_005_adaptive}
+    % \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/vgg_sgd_01_0_11700_ratio_schedule.pdf}
+        \caption{UW ratio experiment for VGG with SGD and adaptive learning rate
+            from $0.1$}
+        \label{fig:ratio_loss_corr_vgg_sgd_01_adaptive}
+    \end{subfigure}
+\end{figure}
