@@ -303,8 +303,8 @@
       /><line y2="19" fill="none" x1="0" clip-path="url(#clipPath13)" x2="230" y1="19"
     /></g
     ><g font-size="16px" transform="translate(250,601)" fill-opacity="1" fill="white" text-rendering="geometricPrecision" image-rendering="optimizeQuality" font-family="'Courier New'" stroke="white" font-weight="bold" stroke-opacity="1"
-    ><text x="52" xml:space="preserve" y="14" clip-path="url(#clipPath15)" stroke="none"
-      >SumSubscriber</text
+    ><text x="8" xml:space="preserve" y="14" clip-path="url(#clipPath15)" stroke="none"
+      >HessianEigenSubscriber</text
     ></g
     ><g font-size="16px" transform="translate(250,671)" fill-opacity="1" fill="rgb(37,65,103)" text-rendering="geometricPrecision" image-rendering="optimizeQuality" font-family="'Courier New'" stroke="rgb(37,65,103)" font-weight="bold" stroke-opacity="1"
     ><rect x="0" width="230" height="40" y="0" clip-path="url(#clipPath13)" stroke="none"

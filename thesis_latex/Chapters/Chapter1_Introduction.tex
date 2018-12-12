@@ -8,14 +8,14 @@ why they work so well in practice.
 
 This explanatory gap is also a reason why developing deep learning applications
 is considered more of an art than a science. In contrast to traditional
-programming, which builds on decades of reasearch and development in electrical
+programming, which builds on decades of research and development in electrical
 engineering, logic, mathematics and theoretical computer science, there's rarely
 one definitive way to solve a certain problem in deep learning.  Additionally,
 the quality of debugging tools available to a programmer on every level of
 abstraction far exceeds what we currently have for differentiable programming.
 Simple questions like ``Does my model learn what I want it to learn?'' are not
 answerable at this point.  We can thus identify a need to supply more useful
-tooling for deep learning researchers and practitioners.  A standard approch to
+tooling for deep learning researchers and practitioners.  A standard approach to
 choosing a parametrisation remains trial-and-error, or only somewhat more
 sophisticated ways to run and test.  The computational cost of training large
 models prohibits quick experimentation and often translates into monetary costs
@@ -25,7 +25,7 @@ enabling a more thorough understanding of what is going on inside the pile of
 linear algebra that is a deep learning model.
 
 This thesis addresses the above in two ways: A software library aiding in deep
-learning debugging and experimentation is designed, implemented and documentted. The same
+learning debugging and experimentation is designed, implemented and documented. The same
 library is then used to investigate experimentally whether unexplored
 metrics can be devised for optimising parameters of the training process while it is running.
 
@@ -84,10 +84,12 @@ of the networks output to the desired output and differentiating it with respect
 to the model parameters. The backpropagation algorithm provides an efficient way
 of computing all the partial derivatives of the loss with respect to each
 parameter (network weight). Parameters are usually updated with some form of the
-gradient descent optimisation algorithm.
+gradient descent optimisation algorithm. An introduction to the mathematics of
+deep neural networks is deferred to
+\cref{sec:review_stochastic_gradient_descent}.
 
 \hypertarget{sec:thesis-goals}{%
-\section{Goals of this thesis}\label{sec:thesis-goals}}
+\section{Goals of this Thesis}\label{sec:thesis-goals}}
 
 The objective of this work is twofold:
 
@@ -95,7 +97,7 @@ The objective of this work is twofold:
     \item
         Create a software library that enables easy and reusable
         implementation of training metrics and abstracts away the concrete model
-        arichtecture
+        architecture
     \item
         Perform experiments on common datasets to investigate whether common
         problems in neural network training can be detected by the use of
@@ -112,6 +114,8 @@ The objective of this work is twofold:
                 inappropriate network architecture
             \item
                 bad generalisation/overfitting
+            \item
+                susceptibility to adversarial attacks
         \end{itemize}
 \end{enumerate}
 
@@ -258,9 +262,12 @@ only writing the Python code exporting the data and for serving it from
 the web server, but also JavaScript for actually displaying it (the
 Polymer library is used for this\footnote{\url{https://www.polymer-project.org/}}).
 
-An attempt to abstract over the the programming language for talking to
+An attempt to abstract over the programming language for talking to
 the server is \href{https://github.com/torrvision/crayon}{Crayon} which
 so far supports Python and Lua.
+
+In summary, TensorBoard is a possible backend for the library developed here,
+but operates at a lower level of abstraction.
 
 \hypertarget{visdom}{%
 \subsection*{Visdom}\label{visdom}}
@@ -275,7 +282,11 @@ with providing useful metrics out-of-the-box.
 \hypertarget{others}{%
 \subsection*{Others}\label{others}}
 
-There are other tools such as
-\href{http://yosinski.com/deepvis}{DeepVis} for offline introspection,
-which offer insights into the training after the fact, but do not help
-guiding the training process while it's running.
+There are other tools such as \href{http://yosinski.com/deepvis}{DeepVis} for
+offline introspection by e.g.  visualising learned features, which offer
+insights into the training after the fact, but do not help guiding the training
+process while it is running.
+
+General-Purpose plotting libraries such as MatplotLib fall into the same
+category as TensorBoard -- they offer primitives but there are no dedicated
+extensions to work with neural networks.
