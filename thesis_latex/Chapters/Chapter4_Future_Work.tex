@@ -76,3 +76,31 @@ that larger batch sizes during training strongly correlate with larger dominant
 eigenvalues of the Hessian. It is unclear if an absolute value can be determined
 for a given model and loss function at which the recommendation to reduce the
 batch size can be made, but this is an interesting area for future research.
+Analogously to \cref{sub:effects_update_to_weight_ratio_on_training_loss} one
+could employ \texttt{ikkuna} to track the largest hessian eigenvalue and a an
+adversarial susceptibility score. The score could be computed as the average
+decrease in accuracy over a set of image pairs where one of each pair is
+adversarially perturbed. We can then discover correlations between metrics such
+as the dominant hessian eigenvalue and the vulnerability of a model to
+adversarial attacks.
+
+
+\section{Tracking Architectural Issues}%
+\label{sec:tracking_architecture}
+
+On of the primary difficulties in developing a neural network model to solve a
+given problem is coming up with an architecture to begin with. Significant
+advancements of the state of the art have been achieved by novel architectures,
+such as the VGG, ResNet, ResNeXt, DenseNet or SqueezeNet, which highlights the
+importance of finding a good number, size and type of layers.
+\cref{sec:layer_saturation} discussed an approach for systematically freezing
+layers, and similar lines of inquiry lead to the question of whether we can
+track in how far the network is too constrained by its layer sizes, or too
+powerful and thus harder to train. \citet{shenk2018} explored how ideas from
+\citep{raghu2017svcca} can be used for identifying such problems. Given we can
+detect when a layer is too large or too small, we could either abort and restart
+training with a smaller architecture, thus saving time on iteration, or even
+resize layers live. It is not obvious how to do this properly, since only the
+insignificant components of a layer should be removed. We would need to identify
+a projection of weight matrices on a lower-dimennsional subspace that does not
+cancel all progress made throughout training.

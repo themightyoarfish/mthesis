@@ -1,4 +1,5 @@
 \chapter{Experiments in live introspection}
+\label{ch:experiments}
 
 This chapter serves the purpose of showcasing the library and validating its
 usefulness for actual deep learning research. While the ultimate goal is to have
@@ -10,7 +11,7 @@ gathering all the data from the necessary experiments, and not for supervising
 the actual training.
 
 The chapter is divided between a reproduction part (see
-\cref{sec:optimization_validation}) and an original research part (see
+\cref{sec:adam}) and an original research part (see
 \cref{sec:detecting_learning_rate_proprocess} and
 \cref{sec:detecting_layer_saturation}). In the former, experiments are conducted
 for two popular variations of gradient descent are reproduced and extended with
@@ -88,6 +89,8 @@ with \texttt{matplotlib}. % and \texttt{seaborn}.
 \section{Detecting Learning Rate Problems}%
 \label{sec:detecting_learning_rate_problems}
 
+\subsection{State of the Art and Related Work}%
+
 \subsection{Ratio-Adaptive Learning Rate Scheduling}%
 \label{sub:ratio_adaptive_learning_rate_scheduling}
 
@@ -108,18 +111,29 @@ we usually decay the learning rate towards the end, leading to smaller magnitude
 of updates (this is a prerequisite for theoretical convergence guarantees for
 SGD, see \citet[p. 20]{saad1998online}). As a matter of fact, this can be easily
 verified by running training with an update rule that scales each gradient so
-that the update hits the target (the network does learn, but much slower and to
-smaller final accuracy; plots are omitted for brevity). It is also not clear
-whether the target should apply to all layers equally. For instance, in networks
-with the (now outdated) $\text{tanh}$ activation function, the later layer's gradients
-are larger as fewer backpropagation steps have been done to them, and for this
-activation function at least, each application of the chain rule entails
-multiplication with a factor $< 1$ (as the tanh derivative never exceeds $1$ and
-decreases to almost $0$ in both limits), so gradients become exponentially
-small. In fact, the vanishing gradient problem was the main driver to introduce
-non-saturating activation functions.  Other nonlinearites such as the rectified
-linear unit do not exhibit the same behaviour, but that does not mean all layers
-must change at the same rate.
+that the update hits the target (the network does learn, but to a significantly
+smaller final accuracy; see \cref{fig:fixed-ratio-opt}). It is also not clear
+whether the target should apply to all layers equally, since this would
+constitute a strong regulariser on the network parameters, limiting
+expressiveness of the model. For instance, in networks with the (now outdated)
+$\text{tanh}$ activation function, the later layer's gradients are larger as
+fewer backpropagation steps have been done to them, and for this activation
+function at least, each application of the chain rule entails multiplication
+with a factor $< 1$ (as the tanh derivative never exceeds $1$ and decreases to
+almost $0$ in both limits), so gradients become exponentially small. In fact,
+the vanishing gradient problem was the main driver to introduce non-saturating
+activation functions.  Other nonlinearites such as the rectified linear unit do
+not exhibit the same behaviour, but that does not mean all layers must change at
+the same rate.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/alexnetmini_sgd_fixed_ratio_01.pdf}
+    \caption[Fixed-Ratio optimisation with AlexNetMini on CIFR10]{AlexNetMini on CIFAR10 at $0.1$ learning rate. The blue line is
+    vanilla SGD while the green one is obtained by scaling the gradients to have
+the updates meet a target ratio of $10^{-3}$}
+    \label{fig:fixed-ratio-opt}
+\end{figure}
 
 As a first approach to an evaluation, we want to try and select the learning
 rate in such a way as to hit the target postulated by
@@ -331,6 +345,14 @@ losses, accuracies and UW ratios for each layer automatically during training.
 In order to make larger trends visible, we smooth the loss trace with a gaussian
 kernel.
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/vgg.pdf}
+    \caption[VGG network with $8$ convolutionsl layers.]{VGG network with $8$ convolutional layers. In
+    deviation from the original architecture, there is no final softmax layer.}
+    \label{fig:vgg16}
+\end{figure}
+
 In the following figures, we plot the loss traces and their inverse derivative
 (the amount of decrease) in the upper right, the average weight-update ratio in
 the lower right, and a scatter plot of ratio versus loss decrease on the left.
@@ -342,7 +364,7 @@ this document. Care has been taken to not destroy the topology of the data.  The
 density in a given area may thus not be entirely accurate. In the UW ratio
 plots, the line displayed is the average over multiple runs.
 
-\subsubsection*{VGG}
+\subsubsection{VGG with Stochastic Gradient Descent}
 
 The plots in for this network only show the first $10.000$ training steps since
 nothing of note happens afterwards. Since most of the ratio values cluster
@@ -401,6 +423,8 @@ Karpathy's constant.
     \end{subfigure}
 \end{figure}
 
+\subsubsection{VGG with Adam}
+
 The same experiment has been run with the Adam optimizer \citep{kingma2014adam}
 and has been found to produce quite different results. We mainly observe that
 the steplike nature of the loss function (sharp decreases at epoch boundaries)
@@ -410,7 +434,32 @@ in the beginning of training, which falls off quickly to SGD's values.
 Convergence takes minimally longer and doesn't occur at all with a learning rate
 of $0.1$ (\cref{fig:ratio_loss_corr_vgg_adam_01}). Counterintuitively, the
 adaptive optimiser is unable to adapt to the high learning rate and is
-outperformed by vanilla SGD.
+outperformed by vanilla SGD. The Adam optimiser keeps running estimates of the
+mean and variance of the gradient of each parameter, with exponential smoothing
+applied. The learning rate is adjusted for each parameter by multiplying it with
+$\frac{\mu_{\text{grad}}}{\sqrt{\sigma_{\text{grad}}} + \epsilon}$. The argument
+by \citet{kingma2014adam} is that in locations of high gradient variance, a
+lower learning rate is appropriate since the estimate of the gradient at this
+spot is noisy and unreliable, so smaller steps are a safer choice. Furthermore,
+they claim that the mean of the gradient vanishes closer to an optimum, which is
+also where we need to anneal the learning rate lest we jump over the minimum.
+The Adam optimiser thus has learning rate annealing built-in. The step size
+parameter $\eta$ is supposed to be of less importance since in Adam's parameter
+update rule, it gives an upper bound on the size of the steps taken in parameter
+space, but it can always be adjusted downward if the gradient variance is too
+high. It can also be adjusted upward up to the upper bound if the gradient mean
+is high, giving Adam momentum-like behaviour. The primary proposition of
+\citet{kingma2014adam} is that manually tuning the learning rate per layer or
+even per parameter is no longer necessary, but we see here that cases can be
+found where precisely this behaviour of Adam would be needed -- we have set a
+too-high learning rate, but Adam fails to compensate for this negligence. This
+casts doubt on the universality of the Adam optimiser.\footnote{The hypothesis
+that Adam starts to show its merit in the absence of batch normalisation could
+not be tested on the VGG architecture, since training did not progress at all
+with any learning rate or optimiser when batch normalisation layers were
+removed. For the smaller AlexNetMini architecture with added batch
+normalisation, Adam did not outperform SGD in the absence of batch norm. To the
+contrary, Adam even lead to vanishing gradients when using batch normalisation.}
 
 \begin{figure}
     \begin{subfigure}{\textwidth}
@@ -444,8 +493,7 @@ seen in
 where the first $500$ training steps are omitted to avoid squishing the
 scatter plot because of the quickly decaying arcs in the beginning of training.
 A possible explanation is that Adam uses estimates of the mean and variance of
-gradients, and possibly overcorrects the learning rate. We will investigate Adam
-more closely in \cref{sec:adam}
+gradients, and possibly overcorrects the learning rate.
 
 \begin{figure}
     \begin{subfigure}{\textwidth}
@@ -473,7 +521,7 @@ more closely in \cref{sec:adam}
     \end{subfigure}
 \end{figure}
 
-\subsubsection*{Other Architectures}
+\subsubsection{Other Architectures}
 
 Several analyses were conducted on the data, but not displayed here due to
 inconclusive results.
@@ -486,11 +534,15 @@ of $5000$ training steps separately reveals nothing beyond a decrease in
 absolute value of ratio and loss, which is expected. Any correlations between
 the two quantities do not change after the initial few steps.
 
+\subsubsection{Conclusion}
+
 The results from all these experiments do not demonstrate that a ratio value
 of $0.001$ is any more significant than others. While it is intuitive that the loss
 can only decrease significantly if the weights change accordingly (unless the
 loss surface is extremely rough), we find no particular insights as to what
 ratio is appropriate for any given point in training.
+
+\subsubsection{Ratio-Adaptive Learning Rate Scheduling}
 
 We now want to check how the UW ratio relates to the loss when we attempt to
 artificially fix the ratio value to a target of $0.001$. Since the updates to the
@@ -529,7 +581,7 @@ differing by a factor of $\sim{}5$, whereas the UW ratios only differ by a facto
 $\sim{}2$. The cleft between reality and expectation is even more pronounced for
 learning rates $0.001$ and $0.1$. This hints at a qualitative difference between
 the paths through parameter space taken by higher vs. lower learning rates. If
-we assumed the directions are mostly the same, we would also expect the higher
+we assume the directions are mostly the same, we would also expect the higher
 learning rate to traverse them quicker (entailing a larger weight change and
 thus a higher UW ratio, but possibly suffering from the usual problems of
 too-high learning rate). If instead the path taken by the higher learning rate
@@ -570,3 +622,37 @@ the phenomenon documented here.
         \label{fig:ratio_loss_corr_vgg_sgd_01_adaptive}
     \end{subfigure}
 \end{figure}
+
+\subsubsection{Conclusion}
+
+The two experiments with a dynamic learning rate schedule based on the average
+ratio of updates and parameters do not yield any definitive insights into
+whether any one value should be considered a target metric. It was obvious from
+the beginning that as the loss curve approaches its asymptote, the change to the
+weights needs to decrease, and indeed this has been demonstrated clearly. It is
+not clear at this point whether the UW ratio provides additional information
+over other metrics such as the loss curve itself or the norm of the gradients,
+but the experiments in influencing the ratio have proven that there is no
+obvious dependency between them -- problems can still be learned with a smooth
+loss decrease even when influencing the UW ratio via learning rate scheduling.
+
+However, more work would be necessary to check whether a moving target could
+help optimisation. We have seen througout this section that  when learning works
+well, the ratio decays similarly to a an exponential, which opens the
+possibility for scheduling the learning rate with some decay function and a base
+value (such as $10^{-3}$).  While this may not aid convergence in cases that are
+well-behaved, it could move models out of areas it would otherwise spend too
+much time in, or reduce parameter oscillations in the face of highly noisy loss
+surfaces.
+
+With the help of \texttt{ikkuna}, one could easily implement a ratio-based
+learning rate schedule with e.g. exponential decay built-in an test its
+performance on a wide range of models and datasets.
+
+\section{Validating Optimiser Research}%
+\label{sec:adam}
+
+In this section, we want to highlight the \texttt{ikkuna}'s usefulness in
+scientific research by partially reproducing \citep{kingma2014adam} and
+investigating in how far the claims made therein hold true on a range of
+problems.
