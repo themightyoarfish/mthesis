@@ -348,8 +348,7 @@ kernel.
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/vgg.pdf}
-    \caption[VGG network with $8$ convolutionsl layers.]{VGG network with $8$ convolutional layers. In
-    deviation from the original architecture, there is no final softmax layer.}
+    \caption[VGG network with $8$ convolutionsl layers.]{VGG network with $8$ convolutional layers.}
     \label{fig:vgg16}
 \end{figure}
 
@@ -641,7 +640,7 @@ help optimisation. We have seen througout this section that  when learning works
 well, the ratio decays similarly to a an exponential, which opens the
 possibility for scheduling the learning rate with some decay function and a base
 value (such as $10^{-3}$).  While this may not aid convergence in cases that are
-well-behaved, it could move models out of areas it would otherwise spend too
+well-behaved, it could move models out of areas they would otherwise spend too
 much time in, or reduce parameter oscillations in the face of highly noisy loss
 surfaces.
 
@@ -653,6 +652,289 @@ performance on a wide range of models and datasets.
 \label{sec:adam}
 
 In this section, we want to highlight the \texttt{ikkuna}'s usefulness in
-scientific research by partially reproducing \citep{kingma2014adam} and
-investigating in how far the claims made therein hold true on a range of
-problems.
+scientific research by conducting experiments in the context of
+\citep{kingma2014adam} and investigating in how far the claims made therein hold
+true on a range of problems. The work investigates the Adam optimisation
+algorithm on several machine learning problems, notably learning a convolutional
+network on the CIFAR10 dataset.
+
+\subsection{The Adam update rule}%
+\label{sub:the_adam_update_rule}
+
+While standard SGD only makes use of the gradients in the current time step to
+compute a parameter update, Adam keeps an exponential moving average of the
+gradient ($m_t$) and its square ($v_t$), supposedly as an estimate for the mean
+and variance of the gradient around the current point in parameter space. This
+estimate is computed for each parameter, meaning Adam incurs a memory overhead
+of $\mathcal{O}(d)$ where $d$ is the number of model parameters. Since the
+estimates are initialised with zero, a bias correction (denoted by
+$\widehat{\cdot}$) is applied.
+
+The parameter updates are computed as
+\begin{align*}
+    \theta_t \leftarrow \theta_{t-1}  - \eta \frac{\widehat{m}_t}{\sqrt{\widehat{v}_t} +
+    \epsilon}
+    \label{eq:adam}
+\end{align*}
+\citeauthor{kingma2014adam} justify the rule like this:
+\begin{quote}
+    With a smaller SNR [quotient of mean and square root of variance] the
+    effective stepsize $\Delta_t$ will be closer to zero. This is a desirable
+    property, since a smaller SNR means that there is greater uncertainty about
+    whether the direction of $m_t$ corresponds to the direction of the true
+    gradient. For example, the SNR value typically becomes closer to $0$ towards
+    an optimum, leading to smaller effective steps in parameter space: a form of
+    automatic annealing.
+\end{quote}
+
+Intuitively, the magnitudes of the update to a parameter will scale linearly
+with the manitude of the running gradient mean (which is effectively a form of
+momentum), but normalised with the magnitude of the running gradient variance so
+that the update is smaller when the gradient is very noisy and larger when there
+is more certainty of the direction of the true gradient.
+
+\subsection{Experiments}%
+\label{sub:experiments}
+
+The experiments conducted here all use the CIFAR10 dataset learned by a range of
+models (among them the one presumably used in \citet{kingma2014adam}). The
+dataset is whitened\footnote{Since I did not manage to implement the
+preprocessing correctly, the dataset used here is from
+\url{https://github.com/szagoruyko/wide-residual-networks}}.
+
+The convolutional network (\cref{fig:adammodel}) used by the authors is not unambigously described in
+the publication, so it cannot be guaranteed that the reproduction is accurate.
+The experiments here also omit the dropout applied to the input layer (it is
+unclear whether \citeauthor{kingma2014adam} refer to the float-converted input
+data itself, which would generally be called the input layer to or the initial
+layer of convolutions) because the network did not learn anything in that case
+and the dropout probability is not specified. We further perform the experiments
+on a fully-connected network without convolutional layers (see
+\cref{fig:fully-connected}) as well as the previously introduced VGG
+architecture (\cref{fig:vgg16}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
+    \caption{Probable model architecture from \citep{kingma2014adam}}
+    \label{fig:adammodel}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
+    \caption{Purely dense model}
+    \label{fig:fully-connected}
+\end{figure}
+
+We want to employ \texttt{ikkuna} to monitor the quantities in Adam's update
+rule on varous architectures. This will allow us to investigate whether there is
+a qualitative difference in how Adam operates on different architectures, as
+well as shed light on its behaviour in cases where it fails to optimise the
+network. We also track the same quantites with vanilla SGD for comparison.
+Additionally, the authors make claims in the publication without accompanying
+evidence, notably
+
+\begin{itemize}
+    \item Convolutional layers should be assigned a smaller learning rate than
+        linear ones and that -- presumably -- Adam does this automatically.
+    \item
+        That the update for the experiment with the convolutional network is
+        dominated by the mean estimate and $\epsilon$ while the gradient
+        variance estimate vanishes to zero after a few epochs.
+\end{itemize}
+Whether these assertions hold true will also be investigated.
+
+It should be noted that the quantities used in \cref{eq:adam} are tensor-valued,
+i.e. the estimates of the gradient moments are computed for each parameter.
+Since visualising all parameters individually is not only computationally
+infeasible, but also useless, some level of granularity with an appropriate
+summary measure needs to be defined. The next level of organisation above
+individual layer weights are the weight tensors themselves. Since layers are the
+basic building blocks, it makes sense to investigate Adam's behaviour on the
+level of individual layers. The question of how to summarise e.g. the gradient
+mean estimate for an entire layer remains. Candidates are
+\begin{enumerate}
+    \item the average over all units
+    \item the norm of the estimate
+    \item the median over all units
+\end{enumerate}
+The first option suffers from the fact that the variance of the mean estimates
+is (empirically) extremely high, so that the scalar summary will be dominated by
+outliers, or be very close to zero as the magnitude of different dimensions
+average out. The norm of the estimate of course suffers from the outlier problem
+as well, but at least gives a sense of the total magnitude and thus the total
+change to a layer. The last option is computationally more demanding, but
+prevents the problem of outliers, while also suffering from the fact that the
+gradient distribution is mostly centered around zero. However, we will first use
+the median since it is an intuitive summary and the variance estimate and
+effective learning rate do not have the zero-centeredness problem.
+
+\subsubsection{The Role of \texttt{ikkuna}}%
+\label{sub:use_of_ikkuna_for_optimiser_research}
+
+We use the \texttt{ikkuna} library to compute and record various metrics during
+reproduction and extension of \citeauthor{kingma2014adam}'s experiments. This
+section showcases how little code is required to implement a recording setup
+portable to any neural network model. A subscriber is employed to record
+\begin{enumerate}
+    \item The biased first moment estimate (exponential running gradient)
+    \item The biased second moment estimate (exponential running squared
+        gradient)
+    \item The bias-corrected first moment estimate
+    \item The bias-corrected second moment estimate
+    \item The effective learning rate
+\end{enumerate}
+
+For all metrics, mean, variance, median, and norm are logged in some interval,
+as computing the median incurs $\mathcal{O}(n\log n)$ runtime cost for each
+layer. Since Adam doesn't directly use the current gradients for its parameter
+updates, we need to extract the effective learning rate used for a layer
+somehow. Since we have access to the gradient $\nabla_t(L)$ and the update
+$\Delta_t$ in each train step, we can divide the two to obtain
+$\frac{\Delta_t}{\nabla_t(L)}=\eta$ which is the learning rate we would need to use
+in a vanilla SGD step with the current gradients. However, gradients can be zero
+at any time, and the corresponding update may not be, since Adam uses
+gradients from the previous steps as well. We thus simply ignore invalid values
+through division by zero in computing the metrics. In the pathological case
+where this leads to an empty tensor, we log $0$ for display purposes, since we
+would otherwise have to work around metric logs with different step vectors.
+
+The subscriber used for recording all the information is displayed in
+\cref{lst:running_moments_sub}. A second subscriber is used to log all the
+computed metrics to a MongoDB database via the \texttt{sacred} library. While
+the cleaner approach here would be to implement a \texttt{SacredBackend} to log
+the metrics automatically, this would require some thought about the differing
+capabilities of different backends. For instance, there is no native form of
+histogram storage in \texttt{sacred}, while it is easy to provide through
+TensorBoard or Matplotlib. Therefore, this backend is left for future work and a
+Subscriber ist used instead for this limited set of experiments.
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize, language=Python, label={lst:running_moments_sub},
+caption={Subscriber to record Adam terms}]
+class BiasCorrectedMomentsSubscriber(PlotSubscriber):
+
+  def __init__(self, lr, beta1, beta2, eps, message_bus=get_default_bus(), tag=None, subsample=40, ylims=None, backend='tb'):
+
+    title        = 'gradient_moments'
+    ylabel       = 'Gradient Moments'
+    xlabel       = 'Train step'
+    subscription = Subscription(self, ['weight_gradients'], tag, subsample)
+    super().__init__([subscription], message_bus,
+                     {'title': title,
+                      'ylabel': ylabel,
+                      'ylims': ylims,
+                      'xlabel': xlabel},
+                     backend=backend)
+
+    # all parameters to Adam
+    self._lr    = lr
+    self._beta1 = beta1
+    self._beta2 = beta2
+    self._eps   = eps
+
+    # records of the running moment estimates
+    self._means = dict()
+    self._vars  = dict()
+
+    # here we set up all the metrics to be published
+    for pub_name in {
+      'biased_grad_mean_estimate_mean',
+      'biased_grad_mean_estimate_median',
+      'biased_grad_mean_estimate_var',
+      'biased_grad_var_estimate_mean',
+      'biased_grad_var_estimate_median',
+      'biased_grad_var_estimate_var',
+      'biased_grad_mean_estimate_norm',
+      'biased_grad_var_estimate_norm',
+      'grad_mean_estimate_mean',
+      'grad_mean_estimate_median',
+      'grad_mean_estimate_var',
+      'grad_var_estimate_mean',
+      'grad_var_estimate_median',
+      'grad_var_estimate_var',
+      'grad_mean_estimate_norm',
+      'grad_var_estimate_norm',
+      'effective_lr_mean',
+      'effective_lr_median',
+      'effective_lr_var',
+      'effective_lr_norm',
+    }:
+      self._add_publication(pub_name, type='DATA')
+
+  def compute(self, message):
+
+    named_module = message.key
+
+    grad         = message.data
+    t            = message.global_step + 1
+
+    # init moving moments if not present
+    if named_module not in self._means:
+      self._means[named_module] = torch.zeros_like(grad)
+      if named_module not in self._vars:
+        self._vars[named_module] = torch.zeros_like(grad)
+
+    exp_avg, exp_avg_sq = self._means[named_module], self._vars[named_module]
+    beta1, beta2        = self._beta1, self._beta2
+
+    exp_avg.mul_(beta1).add_(1 - beta1, grad)
+    exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
+
+    # we use the more efficient ordering of computation from Kingma et al. (p.
+    # 2) used in PyTorch's implementation
+    bias_correction1    = 1 - beta1 ** t
+    bias_correction2    = 1 - beta2 ** t
+    unbiased_exp_avg    = exp_avg / bias_correction1
+    unbiased_exp_avg_sq = exp_avg_sq / bias_correction2
+    step_size           = self._lr * math.sqrt(bias_correction2) / bias_correction1
+    denom               = exp_avg_sq.sqrt().add_(self._eps)
+
+    # here we basically revert the entire thing to get the effective learning
+    # rate
+    update              = step_size * exp_avg / denom
+    update.div_(grad)
+    nan_tensor          = torch.isnan(update)
+    inf_tensor          = torch.isinf(update)
+    effective_lr        = update[(1 - nan_tensor) & (1 - inf_tensor)]
+
+    # it's possible to end up with no valid values -> log 0 so plotting doesn't
+    # crash (nan may also have worked)
+    if grad.sum() == torch.tensor(0.0).cuda():
+      # this would mean all entries are nan or inf because the current gradient was
+      # zero
+      effective_lr = torch.tensor(0.0).cuda()
+
+    # instead of repeating the call to publish_module_message for each topic, look at
+    # all topic names and infer the local variable from the topic name
+    for topic in self.publications['DATA']:
+
+      if topic.startswith('biased_grad_mean'):
+        data = exp_avg
+      elif topic.startswith('biased_grad_var'):
+        data = exp_avg_sq
+      elif topic.startswith('grad_mean'):
+        data = unbiased_exp_avg
+      elif topic.startswith('grad_var'):
+        data = unbiased_exp_avg_sq
+      elif topic.startswith('effective_lr'):
+        data = effective_lr
+      else:
+        raise ValueError(f'Unexpected topic "{topic}"')
+
+      if topic.endswith('norm'):
+        data = data.norm()
+      elif topic.endswith('mean'):
+        data = data.mean()
+      elif topic.endswith('median'):
+        data = data.median()
+      elif topic.endswith('var'):
+        data = data.var()
+      else:
+        raise ValueError(f'Unexpected topic "{topic}"')
+
+      self.message_bus.publish_module_message(message.global_step,
+                                              message.train_step,
+                                              message.epoch, topic,
+                                              message.key, data)
+\end{lstlisting}

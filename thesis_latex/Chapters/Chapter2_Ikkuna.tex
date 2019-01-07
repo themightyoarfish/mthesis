@@ -659,7 +659,7 @@ server responds to HTTP requests). An example is shown in \cref{fig:example_tb}.
     \begin{subfigure}{\textwidth}
     \hypertarget{fig:example_mpl}{%
         \centering
-        \includegraphics[max width=\textwidth]{gfx/diagrams/software_screens/example_mpl.png}
+        \includegraphics[max width=.6\textwidth]{gfx/diagrams/software_screens/example_mpl.png}
         \caption{Exemplary view of a Matplotlib figure forwarded over SSH}\label{fig:example_mpl}
     }
 \end{subfigure}
@@ -747,8 +747,11 @@ used by plugins to announce themselves. \verb+Ikkuna+ provides the
 point. For registering a plugin, the author must simply use that entry point to
 make a plugin available. For illustration, \cref{lst:plugin} shows how to setup
 a \texttt{setup.py} setuptools file. The plugin can be installed like any other
-Python package with \begin{lstlisting}[language=Python] python setup.py install
-\end{lstlisting} which will install all required dependencies inside the current
+Python package with
+\begin{lstlisting}[language=Python]
+python setup.py install
+\end{lstlisting}
+which will install all required dependencies inside the current
 environment. The PyTorch library must be installed manually since the binary
 distribution is too old at the time of writing. Detailed instructions can be
 found in the user guide which is part of the documentation.
