@@ -693,83 +693,6 @@ momentum), but normalised with the magnitude of the running gradient variance so
 that the update is smaller when the gradient is very noisy and larger when there
 is more certainty of the direction of the true gradient.
 
-\subsection{Experiments}%
-\label{sub:experiments}
-
-The experiments conducted here all use the CIFAR10 dataset learned by a range of
-models (among them the one presumably used in \citet{kingma2014adam}). The
-dataset is whitened\footnote{Since I did not manage to implement the
-preprocessing correctly, the dataset used here is from
-\url{https://github.com/szagoruyko/wide-residual-networks}}.
-
-The convolutional network (\cref{fig:adammodel}) used by the authors is not unambigously described in
-the publication, so it cannot be guaranteed that the reproduction is accurate.
-The experiments here also omit the dropout applied to the input layer (it is
-unclear whether \citeauthor{kingma2014adam} refer to the float-converted input
-data itself, which would generally be called the input layer to or the initial
-layer of convolutions) because the network did not learn anything in that case
-and the dropout probability is not specified. We further perform the experiments
-on a fully-connected network without convolutional layers (see
-\cref{fig:fully-connected}) as well as the previously introduced VGG
-architecture (\cref{fig:vgg16}).
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
-    \caption{Probable model architecture from \citep{kingma2014adam}}
-    \label{fig:adammodel}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
-    \caption{Purely dense model}
-    \label{fig:fully-connected}
-\end{figure}
-
-We want to employ \texttt{ikkuna} to monitor the quantities in Adam's update
-rule on varous architectures. This will allow us to investigate whether there is
-a qualitative difference in how Adam operates on different architectures, as
-well as shed light on its behaviour in cases where it fails to optimise the
-network. We also track the same quantites with vanilla SGD for comparison.
-Additionally, the authors make claims in the publication without accompanying
-evidence, notably
-
-\begin{itemize}
-    \item Convolutional layers should be assigned a smaller learning rate than
-        linear ones and that -- presumably -- Adam does this automatically.
-    \item
-        That the update for the experiment with the convolutional network is
-        dominated by the mean estimate and $\epsilon$ while the gradient
-        variance estimate vanishes to zero after a few epochs.
-\end{itemize}
-Whether these assertions hold true will also be investigated.
-
-It should be noted that the quantities used in \cref{eq:adam} are tensor-valued,
-i.e. the estimates of the gradient moments are computed for each parameter.
-Since visualising all parameters individually is not only computationally
-infeasible, but also useless, some level of granularity with an appropriate
-summary measure needs to be defined. The next level of organisation above
-individual layer weights are the weight tensors themselves. Since layers are the
-basic building blocks, it makes sense to investigate Adam's behaviour on the
-level of individual layers. The question of how to summarise e.g. the gradient
-mean estimate for an entire layer remains. Candidates are
-\begin{enumerate}
-    \item the average over all units
-    \item the norm of the estimate
-    \item the median over all units
-\end{enumerate}
-The first option suffers from the fact that the variance of the mean estimates
-is (empirically) extremely high, so that the scalar summary will be dominated by
-outliers, or be very close to zero as the magnitude of different dimensions
-average out. The norm of the estimate of course suffers from the outlier problem
-as well, but at least gives a sense of the total magnitude and thus the total
-change to a layer. The last option is computationally more demanding, but
-prevents the problem of outliers, while also suffering from the fact that the
-gradient distribution is mostly centered around zero. However, we will first use
-the median since it is an intuitive summary and the variance estimate and
-effective learning rate do not have the zero-centeredness problem.
-
 \subsubsection{The Role of \texttt{ikkuna}}%
 \label{sub:use_of_ikkuna_for_optimiser_research}
 
@@ -810,7 +733,7 @@ histogram storage in \texttt{sacred}, while it is easy to provide through
 TensorBoard or Matplotlib. Therefore, this backend is left for future work and a
 Subscriber ist used instead for this limited set of experiments.
 
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize, language=Python, label={lst:running_moments_sub},
+\begin{lstlisting}[label={lst:running_moments_sub},
 caption={Subscriber to record Adam terms}]
 class BiasCorrectedMomentsSubscriber(PlotSubscriber):
 
@@ -938,3 +861,138 @@ class BiasCorrectedMomentsSubscriber(PlotSubscriber):
                                               message.epoch, topic,
                                               message.key, data)
 \end{lstlisting}
+
+The subscriber for logging the metrics is trivial:
+\begin{lstlisting}[language=Python]
+class SacredLoggingSubscriber(Subscriber):
+  '''Subscriber which logs its subscribed values with sacred's metrics API'''
+
+  def __init__(self, experiment, kinds):
+    self._experiment = experiment
+    subscription     = Subscription(self, kinds)
+    super().__init__([subscription], get_default_bus())
+
+  def compute(self, message):
+    if message.key != 'META':
+      name = f'{message.kind}.{message.key.name}'
+    else:
+      name = message.kind
+  self._experiment.log_scalar(name, float(message.data), message.global_step)
+\end{lstlisting}
+
+
+\subsection{Experiments}%
+\label{sub:experiments}
+
+The experiments conducted here all use the CIFAR10 dataset learned by a range of
+models (among them the one presumably used in \citet{kingma2014adam}). The
+dataset is whitened\footnote{Since I did not manage to implement the
+preprocessing correctly, the dataset used here is from
+\url{https://github.com/szagoruyko/wide-residual-networks}}.
+
+The convolutional network (\cref{fig:adammodel}) used by the authors is not unambigously described in
+the publication, so it cannot be guaranteed that the reproduction is accurate.
+The experiments here also omit the dropout applied to the input layer (it is
+unclear whether \citeauthor{kingma2014adam} refer to the float-converted input
+data itself, which would generally be called the input layer to or the initial
+layer of convolutions) because the network did not learn anything in that case
+and the dropout probability is not specified. We further perform the experiments
+on a fully-connected network without convolutional layers (see
+\cref{fig:fully-connected}) as well as the previously introduced VGG
+architecture (\cref{fig:vgg16}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
+    \caption{Probable model architecture from \citep{kingma2014adam}}
+    \label{fig:adammodel}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
+    \caption{Purely dense model}
+    \label{fig:fully-connected}
+\end{figure}
+
+We want to employ \texttt{ikkuna} to monitor the quantities in Adam's update
+rule on varous architectures. This will allow us to investigate whether there is
+a qualitative difference in how Adam operates on different architectures, as
+well as shed light on its behaviour in cases where it fails to optimise the
+network. We also track the same quantites with vanilla SGD for comparison.
+Additionally, the authors make claims in the publication without accompanying
+evidence, notably
+
+\begin{itemize}
+    \item Convolutional layers should be assigned a smaller learning rate than
+        linear ones and that -- presumably -- Adam does this automatically.
+    \item
+        That the update for the experiment with the convolutional network is
+        dominated by the mean estimate and $\epsilon$ while the gradient
+        variance estimate vanishes to zero after a few epochs.
+\end{itemize}
+Whether these assertions hold true will also be investigated.
+
+It should be noted that the quantities used in \cref{eq:adam} are tensor-valued,
+i.e. the estimates of the gradient moments are computed for each parameter.
+Since visualising all parameters individually is not only computationally
+infeasible, but also useless, some level of granularity with an appropriate
+summary measure needs to be defined. The next level of organisation above
+individual layer weights are the weight tensors themselves. Since layers are the
+basic building blocks, it makes sense to investigate Adam's behaviour on the
+level of individual layers. The question of how to summarise e.g. the gradient
+mean estimate for an entire layer remains. Candidates are
+\begin{enumerate}
+    \item the average over all units
+    \item the norm of the estimate
+    \item the median over all units
+\end{enumerate}
+The first option suffers from the fact that the variance of the mean estimates
+is (empirically) extremely high, so that the scalar summary will be dominated by
+outliers, or be very close to zero as the magnitude of different dimensions
+average out. The norm of the estimate of course suffers from the outlier problem
+as well, but at least gives a sense of the total magnitude and thus the total
+change to a layer. The last option is computationally more demanding, but
+prevents the problem of outliers, while also suffering from the fact that the
+gradient distribution is mostly centered around zero. However, we will first use
+the median since it is an intuitive summary and the variance estimate and
+effective learning rate do not have the zero-centeredness problem.
+
+\subsubsection{Reproducing the Convnet experiment}
+
+As a start, we check whether we can successfully recreate the experiment from
+\citet{kingma2014adam} with the convolutional architecture. On p. 7 they show
+the performance of the network over the first three epochs and the entire
+training time. Our reproduction with the exact same parameters  is shown in
+\cref{fig:adam-repro}.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel/adammodel_adam_0001_0_1200.pdf}
+        \caption{Adam convnet with learning rate $0.0005$, first three epochs}
+        \label{fig:adam-repro-1}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel/adammodel_adam_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$, entire training}
+        \label{fig:adam-repro-2}
+    \end{subfigure}
+    \label{fig:adam-repro}
+\end{figure}
+
+\citeauthor{kingma2014adam} report a decrease of the training cost from $\sim
+2.2$ down to around $0.4$ over the course of the first three epochs. In our
+reproduction (\cref{fig:adam-repro-1}), the loss does not decrease that rapidly,
+but the trajectory is broadly similar, also when considering the entire training
+(\cref{fig:adam-repro-2}). Nevertheless, the original setup achieves training
+loss of less than $0.001$ while our experiment does not improve beypng $0.05$.
+In \citeauthor{kingma2014adam}'s experiment, the
+training loss almost saturates after about 20 epochs, the same holds for our
+reproduction. However, the original result shows the network gradually learning
+the entire time whereas performance basically stalls in our reproduction after
+20 epochs. We can thus not completely reproduces the original experiment.
+Possible reasons are an incorrectly specified architecture, or details of the
+training procedure which \citeauthor{kingma2014adam} do not mention.
