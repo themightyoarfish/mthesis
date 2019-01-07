@@ -228,6 +228,13 @@ minimum height=1em, typewriter]
 \setboolean{enable-backrefs}{false} % true false
 % ****************************************************************************************************
 
+% Custom colour definitions
+\definecolor{verylightblue}{RGB}{243, 243, 250}
+\definecolor{verydarkblue}{RGB}{37, 65, 103}
+\definecolor{reddish}{RGB}{238, 86, 121}
+\definecolor{yellowish}{RGB}{217, 216, 116}
+\definecolor{mediumlightblue}{RGB}{157, 176, 191}
+
 
 % ****************************************************************************************************
 % 2. Personal data and user ad-hoc commands
@@ -305,25 +312,24 @@ minimum height=1em, typewriter]
 % ****************************************************************************************************
 \usepackage{listings}
 %\lstset{emph={trueIndex,root},emphstyle=\color{BlueViolet}}%\underbar} % for special keywords
-\lstset{language=[LaTeX]Tex,%C++,
-   keywordstyle=\color{RoyalBlue},%\bfseries,
-   captionpos=b,
-   basicstyle=\small\ttfamily,
-   aboveskip=\baselineskip,
-   belowskip=\baselineskip,
-   % identifierstyle=\color{NavyBlue},
-   commentstyle=\color{webgreen}\ttfamily,
-   stringstyle=\color{webbrown},
-   numbers=none,%left,%
-   numberstyle=\scriptsize,%\tiny
-   stepnumber=5,
-   numbersep=8pt,
-   showstringspaces=false,
-   breaklines=true,
-   frameround=ftff,
-   frame=single,
-   belowcaptionskip=.75\baselineskip,
-   rulecolor=\color{black}
+\lstset{language=Python,
+    otherkeywords={self,__init__},
+    deletekeywords={sum},
+    captionpos=b,
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\color{reddish},%\bfseries,
+    % identifierstyle=\color{NavyBlue},
+    commentstyle=\color{mediumlightblue}\ttfamily,
+    stringstyle=\color{verydarkblue},
+    numbers=none,%left,%
+    numberstyle=\scriptsize,%\tiny
+    stepnumber=5,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frameround=ffff,
+    frame=single,
+    rulecolor=\color{black}
 }
 % ****************************************************************************************************
 
@@ -364,13 +370,6 @@ minimum height=1em, typewriter]
       \backrefcitedmultistring{#2}%
    \fi}%
 }{\relax}
-
-% Custom colour definitions
-\definecolor{verylightblue}{RGB}{243, 243, 250}
-\definecolor{verydarkblue}{RGB}{37, 65, 103}
-\definecolor{reddish}{RGB}{238, 86, 121}
-\definecolor{yellowish}{RGB}{217, 216, 116}
-\definecolor{mediumlightblue}{RGB}{157, 176, 191}
 
 % ********************************************************************
 % Hyperreferences
