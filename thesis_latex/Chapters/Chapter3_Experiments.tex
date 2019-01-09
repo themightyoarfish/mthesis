@@ -13,14 +13,14 @@ the actual training.
 The chapter is divided between a reproduction part (see
 \cref{sec:adam}) and an original research part (see
 \cref{sec:detecting_learning_rate_proprocess} and
-\cref{sec:detecting_layer_saturation}). In the former, experiments are conducted
-for two popular variations of gradient descent are reproduced and extended with
+\cref{sec:detecting_layer_saturation}). In the former, experiments conducted
+for a popular variant of stochastic gradient descent are reproduced and extended with
 the help of the library. The goal is to fact-check claims made by the authors
-and validate said claims on more scenarios than are shown in the respective
-publications. This will serve to show how \texttt{ikkuna} could have been
+and validate said claims on more scenarios than are shown in the
+publication. This will serve to show how \texttt{ikkuna} could have been
 employed for this type of work. The second part will be concerned with employing
 the library to investigate hypotheses for diagnosing roadblocks in the training
-preprocess. Recall from \cref{sec:motivation} the multitude of hyperparameters
+process. Recall from \cref{sec:motivation} the multitude of hyperparameters
 for a deep learning model and training regimen. In this work, we will concern
 ourselves with the question of figuring out a good learning rate and when to
 stop training layers to reduce computation time.
@@ -85,6 +85,547 @@ information captured by \texttt{ikkuna} during training is logged to a MongoDB
 schemaless database with the help of the \texttt{sacred} library. The data can
 then be analysed off-line with MongoDB's Python interface. Plots are created
 with \texttt{matplotlib}. % and \texttt{seaborn}.
+
+\section{Validating Optimiser Research}%
+\label{sec:adam}
+
+In this section, we want to highlight the \texttt{ikkuna}'s usefulness in
+scientific research by conducting experiments in the context of
+\citep{kingma2014adam} and investigating in how far the claims made therein hold
+true on a range of problems. The work investigates the Adam optimisation
+algorithm on several machine learning problems, notably learning a convolutional
+network on the CIFAR10 dataset.
+
+\subsection{The Adam update rule}%
+\label{sub:the_adam_update_rule}
+
+While standard SGD only makes use of the gradients in the current time step to
+compute a parameter update, Adam keeps an exponential moving average of the
+gradient ($m_t$) and its square ($v_t$), supposedly as an estimate for the mean
+and variance of the gradient around the current point in parameter space. This
+estimate is computed for each parameter, meaning Adam incurs a memory overhead
+of $\mathcal{O}(d)$ where $d$ is the number of model parameters. Since the
+estimates are initialised with zero, a bias correction (denoted by
+$\widehat{\cdot}$) is applied.
+
+The parameter updates are computed as
+\begin{align*}
+    \theta_t \leftarrow \theta_{t-1}  - \eta \frac{\widehat{m}_t}{\sqrt{\widehat{v}_t} +
+    \epsilon}
+    \label{eq:adam}
+\end{align*}
+\citeauthor{kingma2014adam} justify the rule like this:
+\begin{quote}
+    With a smaller SNR [quotient of mean and square root of variance] the
+    effective stepsize $\Delta_t$ will be closer to zero. This is a desirable
+    property, since a smaller SNR means that there is greater uncertainty about
+    whether the direction of $m_t$ corresponds to the direction of the true
+    gradient. For example, the SNR value typically becomes closer to $0$ towards
+    an optimum, leading to smaller effective steps in parameter space: a form of
+    automatic annealing.
+\end{quote}
+
+Intuitively, the magnitudes of the update to a parameter will scale linearly
+with the manitude of the running gradient mean (which is effectively a form of
+momentum), but normalised with the magnitude of the running gradient variance so
+that the update is smaller when the gradient is very noisy and larger when there
+is more certainty of the direction of the true gradient.
+
+\subsubsection{The Role of \texttt{ikkuna}}%
+\label{sub:use_of_ikkuna_for_optimiser_research}
+
+We use the \texttt{ikkuna} library to compute and record various metrics during
+reproduction and extension of \citeauthor{kingma2014adam}'s experiments. This
+section showcases how little code is required to implement a recording setup
+portable to any neural network model. A subscriber is employed to record
+\begin{enumerate}
+    \item The biased first moment estimate (exponential running gradient)
+    \item The biased second moment estimate (exponential running squared
+        gradient)
+    \item The bias-corrected first moment estimate
+    \item The bias-corrected second moment estimate
+    \item The effective learning rate
+\end{enumerate}
+
+For all metrics, mean, variance, median, and norm are logged in some interval,
+as computing the median incurs $\mathcal{O}(n\log n)$ runtime cost for each
+layer. Since Adam doesn't directly use the current gradients for its parameter
+updates, we need to extract the effective learning rate used for a layer
+somehow. Since we have access to the gradient $\nabla_t(L)$ and the update
+$\Delta_t$ in each train step, we can divide the two to obtain
+$\frac{\Delta_t}{\nabla_t(L)}=\eta$ which is the learning rate we would need to
+use in a vanilla SGD step with the current gradients. However, gradients can be
+zero at any time, and the corresponding update may not be, since Adam uses
+gradients from the previous steps as well. We thus simply ignore invalid values
+through division by zero in computing the metrics. In the pathological case
+where this leads to an empty tensor, we plot NaN (leading to an omission of the
+value), since we would otherwise have to work around metric logs with different
+step vectors.
+
+The subscriber used for recording all the information is displayed in
+\cref{lst:running_moments_sub}. A second subscriber is used to log all the
+computed metrics to a MongoDB database via the \texttt{sacred} library. While
+the cleaner approach here would be to implement a \texttt{SacredBackend} to log
+the metrics automatically, this would require some thought about the differing
+capabilities of different backends. For instance, there is no native form of
+histogram storage in \texttt{sacred}, while it is easy to provide through
+TensorBoard or Matplotlib. Therefore, this backend is left for future work and a
+Subscriber ist used instead for this limited set of experiments.
+
+\begin{lstlisting}[label={lst:running_moments_sub},
+caption={Subscriber to record Adam terms}]
+class BiasCorrectedMomentsSubscriber(PlotSubscriber):
+
+  def __init__(self, lr, beta1, beta2, eps, message_bus=get_default_bus(), tag=None, subsample=40, ylims=None, backend='tb'):
+
+    title        = 'gradient_moments'
+    ylabel       = 'Gradient Moments'
+    xlabel       = 'Train step'
+    subscription = Subscription(self, ['weight_gradients'], tag, subsample)
+    super().__init__([subscription], message_bus,
+                     {'title': title,
+                      'ylabel': ylabel,
+                      'ylims': ylims,
+                      'xlabel': xlabel},
+                     backend=backend)
+
+    # all parameters to Adam
+    self._lr    = lr
+    self._beta1 = beta1
+    self._beta2 = beta2
+    self._eps   = eps
+
+    # records of the running moment estimates
+    self._means = dict()
+    self._vars  = dict()
+
+    # here we set up all the metrics to be published
+    for pub_name in {
+      'biased_grad_mean_estimate_mean',
+      'biased_grad_mean_estimate_median',
+      'biased_grad_mean_estimate_var',
+      'biased_grad_var_estimate_mean',
+      'biased_grad_var_estimate_median',
+      'biased_grad_var_estimate_var',
+      'biased_grad_mean_estimate_norm',
+      'biased_grad_var_estimate_norm',
+      'grad_mean_estimate_mean',
+      'grad_mean_estimate_median',
+      'grad_mean_estimate_var',
+      'grad_var_estimate_mean',
+      'grad_var_estimate_median',
+      'grad_var_estimate_var',
+      'grad_mean_estimate_norm',
+      'grad_var_estimate_norm',
+      'effective_lr_mean',
+      'effective_lr_median',
+      'effective_lr_var',
+      'effective_lr_norm',
+    }:
+      self._add_publication(pub_name, type='DATA')
+
+  def compute(self, message):
+
+    named_module = message.key
+
+    grad         = message.data
+    t            = message.global_step + 1
+
+    # init moving moments if not present
+    if named_module not in self._means:
+      self._means[named_module] = torch.zeros_like(grad)
+      if named_module not in self._vars:
+        self._vars[named_module] = torch.zeros_like(grad)
+
+    exp_avg, exp_avg_sq = self._means[named_module], self._vars[named_module]
+    beta1, beta2        = self._beta1, self._beta2
+
+    exp_avg.mul_(beta1).add_(1 - beta1, grad)
+    exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
+
+    # we use the more efficient ordering of computation from Kingma et al. (p.
+    # 2) used in PyTorch's implementation
+    bias_correction1    = 1 - beta1 ** t
+    bias_correction2    = 1 - beta2 ** t
+    unbiased_exp_avg    = exp_avg / bias_correction1
+    unbiased_exp_avg_sq = exp_avg_sq / bias_correction2
+    step_size           = self._lr * math.sqrt(bias_correction2) / bias_correction1
+    denom               = exp_avg_sq.sqrt().add_(self._eps)
+
+    # here we basically revert the entire thing to get the effective learning
+    # rate
+    update              = step_size * exp_avg / denom
+    update.div_(grad)
+    nan_tensor          = torch.isnan(update)
+    inf_tensor          = torch.isinf(update)
+    effective_lr        = update[(1 - nan_tensor) & (1 - inf_tensor)]
+
+    # it's possible to end up with no valid values -> log 0 so plotting doesn't
+    # crash (nan may also have worked)
+    if grad.sum() == torch.tensor(0.0).cuda():
+      # this would mean all entries are nan or inf because the current gradient was
+      # zero
+      effective_lr = torch.tensor(0.0).cuda()
+
+    # instead of repeating the call to publish_module_message for each topic, look at
+    # all topic names and infer the local variable from the topic name
+    for topic in self.publications['DATA']:
+
+      if topic.startswith('biased_grad_mean'):
+        data = exp_avg
+      elif topic.startswith('biased_grad_var'):
+        data = exp_avg_sq
+      elif topic.startswith('grad_mean'):
+        data = unbiased_exp_avg
+      elif topic.startswith('grad_var'):
+        data = unbiased_exp_avg_sq
+      elif topic.startswith('effective_lr'):
+        data = effective_lr
+      else:
+        raise ValueError(f'Unexpected topic "{topic}"')
+
+      if topic.endswith('norm'):
+        data = data.norm()
+      elif topic.endswith('mean'):
+        data = data.mean()
+      elif topic.endswith('median'):
+        data = data.median()
+      elif topic.endswith('var'):
+        data = data.var()
+      else:
+        raise ValueError(f'Unexpected topic "{topic}"')
+
+      self.message_bus.publish_module_message(message.global_step,
+                                              message.train_step,
+                                              message.epoch, topic,
+                                              message.key, data)
+\end{lstlisting}
+
+The subscriber for logging the metrics is trivial:
+\begin{lstlisting}[language=Python]
+class SacredLoggingSubscriber(Subscriber):
+  '''Subscriber which logs its subscribed values with sacred's metrics API'''
+
+  def __init__(self, experiment, kinds):
+    self._experiment = experiment
+    subscription     = Subscription(self, kinds)
+    super().__init__([subscription], get_default_bus())
+
+  def compute(self, message):
+    if message.key != 'META':
+      name = f'{message.kind}.{message.key.name}'
+    else:
+      name = message.kind
+  self._experiment.log_scalar(name, float(message.data), message.global_step)
+\end{lstlisting}
+
+
+\subsection{Experiments}%
+\label{sub:experiments}
+
+The experiments conducted here all use the CIFAR10 dataset learned by a range of
+models (among them the one presumably used in \citet{kingma2014adam}). The
+dataset is whitened\footnote{Since I did not manage to implement the
+preprocessing correctly, the dataset used here is from
+\url{https://github.com/szagoruyko/wide-residual-networks}}.
+
+The convolutional network (\cref{fig:adammodel}) used by the authors is not unambigously described in
+the publication, so it cannot be guaranteed that the reproduction is accurate.
+The experiments here also omit the dropout applied to the input layer (it is
+unclear whether \citeauthor{kingma2014adam} refer to the float-converted input
+data itself, which would generally be called the input layer to or the initial
+layer of convolutions) because the network did not learn anything in that case
+and the dropout probability is not specified. We further perform the experiments
+on a fully-connected network without convolutional layers (see
+\cref{fig:fully-connected}) as well as the previously introduced VGG
+architecture (\cref{fig:vgg16}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
+    \caption{Probable model architecture from \citep{kingma2014adam}}
+    \label{fig:adammodel}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
+    \caption{Purely dense model}
+    \label{fig:fully-connected}
+\end{figure}
+
+We want to employ \texttt{ikkuna} to monitor the quantities in Adam's update
+rule on varous architectures. This will allow us to investigate whether there is
+a qualitative difference in how Adam operates on different architectures, as
+well as shed light on its behaviour in cases where it fails to optimise the
+network. We also track the same quantites with vanilla SGD for comparison.
+Additionally, the authors make claims in the publication without accompanying
+evidence, notably
+
+\begin{itemize}
+    \item \label{itm:adam-claim-1} Convolutional layers should be assigned a smaller learning rate than
+        linear ones and that -- presumably -- Adam does this automatically.
+    \item
+        That the update for the experiment with the convolutional network is
+        dominated by the mean estimate and $\epsilon$ while the gradient
+        variance estimate vanishes to zero after a few epochs.
+\end{itemize}
+Whether these assertions hold true will also be investigated.
+
+It should be noted that the quantities used in \cref{eq:adam} are tensor-valued,
+i.e. the estimates of the gradient moments are computed for each parameter.
+Since visualising all parameters individually is not only computationally
+infeasible, but also useless, some level of granularity with an appropriate
+summary measure needs to be defined. The next level of organisation above
+individual layer weights are the weight tensors themselves. Since layers are the
+basic building blocks, it makes sense to investigate Adam's behaviour on the
+level of individual layers. The question of how to summarise e.g. the gradient
+mean estimate for an entire layer remains. Candidates are
+\begin{enumerate}
+    \item the average over all units
+    \item the norm of the estimate
+    \item the median over all units
+\end{enumerate}
+The first option suffers from the fact that the gradient distribution is
+centered around zero, so the values for most layers empirically average out.
+The norm of the estimate on the other hand gives a sense of the total magnitude and thus the total
+change to a layer. The last option is computationally more demanding, but
+prevents the problem of outliers, while also suffering from the fact that the
+gradient distribution is mostly centered around zero. We will therefore plot the
+norm of the first moment estimate since we are mostly interested in how much
+total contribution the term has for in the update. For the second moment, we
+plot the median, since all values are larger than $1$ and thus cannot average
+out. Norm, mean and median will exhibit similar qualitative behaviour for this
+term anyway, so the choice is less critical. For plotting effective learning
+rates, we once again report the median, as they vary a lot within a layer and we
+would like to have some form of average so it fits with our concept of a
+actual learning rate.
+
+\subsubsection{Reproducing the Convnet experiment}
+
+As a start, we check whether we can successfully recreate the experiment from
+\citep{kingma2014adam} with the convolutional architecture. On p. 7 they show
+the performance of the network over the first three epochs and the entire
+training time. Our reproduction with the exact same parameters  is shown in
+\cref{fig:adam-repro}.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_1200.pdf}
+        \caption{Adam convnet with learning rate $0.001$, first three epochs}
+        \label{fig:adam-repro-1}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$, entire training}
+        \label{fig:adam-repro-2}
+    \end{subfigure}
+    \label{fig:adam-repro}
+\end{figure}
+
+\citeauthor{kingma2014adam} report a decrease of the training cost from $\sim
+2.2$ down to around $0.4$ over the course of the first three epochs. In our
+reproduction (\cref{fig:adam-repro-1}), the loss does not decrease that rapidly,
+but the trajectory is broadly similar, also when considering the entire training
+(\cref{fig:adam-repro-2}). Nevertheless, the original setup achieves training
+loss of less than $0.001$ while our experiment does not improve beyond $0.05$.
+In \citeauthor{kingma2014adam}'s experiment, the training loss almost saturates
+after about 20 epochs, the same holds for our reproduction. However, the
+original result shows the network gradually learning the entire time whereas
+performance basically stalls in our reproduction after 20 epochs. We can thus
+not completely reproduces the original experiment.  Possible reasons are an
+incorrectly specified architecture, a different loss function\footnote{This is
+    very unlikely, as the categorical crossentropy is almost always used for
+classification tasks, and also the absolute values are rather similar.}, or
+details of the training procedure which \citeauthor{kingma2014adam} do not
+mention.
+
+We can also see that in our experiment, the claim that
+\begin{quote}
+ the second moment estimate $v_t$ vanishes to zeros after a few epochs and is
+ dominated by the $\epsilon$ in [the update rule]
+\end{quote}
+does not hold true. Just as in the paper, we set $\epsilon = 10^{-8}$, but the
+median second moment estimate only vanishes for some layers and increases even
+for the first convolutional layer. Saying that the update is ``dominated'' by
+$\epsilon$ is therefore inaccurate. It is unclear how
+\citeauthor{kingma2014adam} evaluate the tensor-valued second moment estimate to
+arrive at this conclusion.
+
+We will now turn to a qualitative and quantitative evaluation of how Adam
+performs on fully-connected and convolutional architectures and whether it
+actually tunes the learning rate like \citet{kingma2014adam} suggest.
+
+\subsubsection{Behaviour of the Adam Update Rule on different Neural
+Architectures}
+\label{subsec:adam-behaviour}
+
+\cref{fig:adammodel} shows the evolution of Adam's terms and the effective
+learning rate for different base learning rates. We can see that, surprisingly,
+Adam appears very sensitive to the base learning rate, despite the fact that it
+is supposed to automatically tune it. It is curious that Adam performs best with
+the smallest learning rate and gradually worse with larger ones. We find that in
+the best-performing case, the second moment estimate does not actually vanish
+toward zero. To the contrary, gradient variance gradually increases for all
+layers througout training. Moreover, the per-layer learning rates used by Adam
+for the smaller two learning rates are quite similar (beware of the log-scale), but still a large
+performance gap exists. Their observation that the second moment estimate
+vanishes leads \citeauthor{kingma2014adam} to the hypothesis that
+\begin{quote}
+     The second moment estimate is therefore a poor
+     approximation to the geometry of the cost function in CNNs comparing to
+     fully connected network [\ldots].
+\end{quote}
+and we see here that there may be a point to this and a vanishing second moment
+is a bad sign for the learning process. The best-performing learning rate is the
+one with second moments most strongly diverging from zero. This could mean it is
+a useful metric to monitor during training and anneal the learning rate
+accordingly. The Adam update rule uses the second moment to do precisely this,
+so we can draw the conclusion that the learning rate schedule automatically
+instituted by a significant gradient variance is superior to one where the
+variance stagnates. It is not clear how to derive a
+``learning-rate-appropriateness metric'' from this finding, but it is a hint
+that the running gradient variance could play a role in such a metric.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.0005$}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.01$}
+        \label{fig:adammodel-3}
+    \end{subfigure}
+    \label{fig:adammodel}
+\end{figure}
+
+If we consider the SGD algorithm instead (\cref{fig:adammodel-sgd}), we can see
+however, that the variance estimate does not vanish in any of the cases, but
+instead approaches its asymptote more quickly with increasing learning rate.
+This paired with the insights from \cref{fig:adammodel} hints at the importance
+of increasing gradient variances in some fashion througout training. Possibly,
+an increase in variance is correlated with layers becoming more differentiated
+and sensitive to more patterns and is thus indicative of learning progress.
+It would be interesting to perform these same experiments with batch
+normalisation applied between layers to see whether their influence -- which
+should counteract any variance increase -- invalidates this hypothesis.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.0005$, optimised with SGD}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$, optimised with SGD}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.01$, optimised with SGD}
+        \label{fig:adammodel-3}
+    \end{subfigure}
+    \label{fig:adammodel-sgd}
+    \caption[Adam moments with SGD]{Adam moments with SGD. The effective learning rate is not used, but
+    is what would be used in the Adam update.}
+\end{figure}
+
+The experiments above where run on the fully connected model as well (see
+\cref{fig:fully-connected}). The results are shown in
+\cref{fig:fully-connected-experiment}. The first thing we notice is that Adam
+behaves very differently in the absence of convolutional layers. Whereas we saw
+a difference in performance between learning rates of $0.0005$ and $0.001$ on
+the Convnet, the fully connected model behaves identically in both cases.
+\citeauthor{kingma2014adam} state that there is a qualitative difference between
+the gradients of dense and convolutional layers, and we see this fact
+demonstrated here, as the learning rate does not seem to affect the gradient
+distributions much, in contrast with the previous experiment.
+
+Similarly to earlier findings, we see again that Adam is in fact quite sensitive
+to the base learning rate set. Once again, a value of one order of magnitude
+beyond the best one makes performance deteriorate. In this case, the first
+moment estimate vanishes completely, leading to zero-valued gradients and no
+learning at all.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
+        \caption{Dense model with learning rate $0.0005$, optimised with Adam}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_0001_0_-1.pdf}
+        \caption{Dense model with learning rate $0.001$, optimised with Adam}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_001_0_-1.pdf}
+        \caption{Dense model with learning rate $0.01$, optimised with Adam}
+    \end{subfigure}
+    \label{fig:fully-connected-experiment}
+    \caption{Adam moments on a purely dense model}
+\end{figure}
+
+One question not answered yet is \cref{itm:adam-claim-1}. From
+\cref{fig:adammodel} and \cref{fig:fully-connected-experiment} we clearly see
+that Adam does in fact tend to assigning higher learning rates to dense layers
+and lower ones to convolutions. If this heuristic were to be used for manually
+tuning SGD, it would indeed be automatically handled by Adam. Ignoring the final
+classification layer (\texttt{/classifier/linear1}) in the Convnet, this seems
+to come from the fact that dense layers exhibit a gradient variance several
+orders of magnitude smaller, while the gradient mean -- while still being
+smaller -- differs by less than one order of magnitude.
+
+We omit here the results for the fully connected model trained with SGD (because
+it learns only for the largest learning rate), as well as the larger VGG16
+convolutional architecture trained with both optimisers, since the latter
+appears to be invariant to any change and may simply be too powerful to exhibit
+large differences. See \cref{ch:appendixC} for these experiments.
+
+\subsection{Conclusion}
+
+With the experimentr performed here, we have evaluated the qualitative bahviour
+of the Adam optimisation algorithm compared to vanilla stochastic gradient
+descent on three architectures, with several learning rates. We find that Adam
+is -- in spite of its promise -- very sensitive to the learning rate and the
+correct order of magnitude must be determined beforehand. We have validated that
+it automatically assigns smaller learning rates to convolutional layers than to
+dense once, a finding in line with a popular heuristic employed manually for
+SGD. We also examined the behaviour of the second moment estimate and find that
+it appears to be related to the speed of learning, albeit not in a trivial
+fashion. A further interesting phenomenon is that median learning rates for
+individual layers can range from $10^{-3}$ all the way up to $10$, which would
+never work when applied to an entire network. More work would be necessary to
+check whether using these learning rates for SGD would achieve the same
+performance. If not, then this would prove that Adam finds qualitatively
+different paths through the weight space by incoporating past gradient
+information.
+
+The \texttt{ikkuna} library was used to extract all metrics during training and
+log them to a database. While code for the experimental setup had to be written,
+the code for computing and logging the metrics is simple and short, and only
+needs to be written once. This software could have been used to easily perform
+more experiments than \citet{kingma2014adam} provided.
 
 \section{Detecting Learning Rate Problems}%
 \label{sec:detecting_learning_rate_problems}
@@ -647,537 +1188,3 @@ surfaces.
 With the help of \texttt{ikkuna}, one could easily implement a ratio-based
 learning rate schedule with e.g. exponential decay built-in an test its
 performance on a wide range of models and datasets.
-
-\section{Validating Optimiser Research}%
-\label{sec:adam}
-
-In this section, we want to highlight the \texttt{ikkuna}'s usefulness in
-scientific research by conducting experiments in the context of
-\citep{kingma2014adam} and investigating in how far the claims made therein hold
-true on a range of problems. The work investigates the Adam optimisation
-algorithm on several machine learning problems, notably learning a convolutional
-network on the CIFAR10 dataset.
-
-\subsection{The Adam update rule}%
-\label{sub:the_adam_update_rule}
-
-While standard SGD only makes use of the gradients in the current time step to
-compute a parameter update, Adam keeps an exponential moving average of the
-gradient ($m_t$) and its square ($v_t$), supposedly as an estimate for the mean
-and variance of the gradient around the current point in parameter space. This
-estimate is computed for each parameter, meaning Adam incurs a memory overhead
-of $\mathcal{O}(d)$ where $d$ is the number of model parameters. Since the
-estimates are initialised with zero, a bias correction (denoted by
-$\widehat{\cdot}$) is applied.
-
-The parameter updates are computed as
-\begin{align*}
-    \theta_t \leftarrow \theta_{t-1}  - \eta \frac{\widehat{m}_t}{\sqrt{\widehat{v}_t} +
-    \epsilon}
-    \label{eq:adam}
-\end{align*}
-\citeauthor{kingma2014adam} justify the rule like this:
-\begin{quote}
-    With a smaller SNR [quotient of mean and square root of variance] the
-    effective stepsize $\Delta_t$ will be closer to zero. This is a desirable
-    property, since a smaller SNR means that there is greater uncertainty about
-    whether the direction of $m_t$ corresponds to the direction of the true
-    gradient. For example, the SNR value typically becomes closer to $0$ towards
-    an optimum, leading to smaller effective steps in parameter space: a form of
-    automatic annealing.
-\end{quote}
-
-Intuitively, the magnitudes of the update to a parameter will scale linearly
-with the manitude of the running gradient mean (which is effectively a form of
-momentum), but normalised with the magnitude of the running gradient variance so
-that the update is smaller when the gradient is very noisy and larger when there
-is more certainty of the direction of the true gradient.
-
-\subsubsection{The Role of \texttt{ikkuna}}%
-\label{sub:use_of_ikkuna_for_optimiser_research}
-
-We use the \texttt{ikkuna} library to compute and record various metrics during
-reproduction and extension of \citeauthor{kingma2014adam}'s experiments. This
-section showcases how little code is required to implement a recording setup
-portable to any neural network model. A subscriber is employed to record
-\begin{enumerate}
-    \item The biased first moment estimate (exponential running gradient)
-    \item The biased second moment estimate (exponential running squared
-        gradient)
-    \item The bias-corrected first moment estimate
-    \item The bias-corrected second moment estimate
-    \item The effective learning rate
-\end{enumerate}
-
-For all metrics, mean, variance, median, and norm are logged in some interval,
-as computing the median incurs $\mathcal{O}(n\log n)$ runtime cost for each
-layer. Since Adam doesn't directly use the current gradients for its parameter
-updates, we need to extract the effective learning rate used for a layer
-somehow. Since we have access to the gradient $\nabla_t(L)$ and the update
-$\Delta_t$ in each train step, we can divide the two to obtain
-$\frac{\Delta_t}{\nabla_t(L)}=\eta$ which is the learning rate we would need to use
-in a vanilla SGD step with the current gradients. However, gradients can be zero
-at any time, and the corresponding update may not be, since Adam uses
-gradients from the previous steps as well. We thus simply ignore invalid values
-through division by zero in computing the metrics. In the pathological case
-where this leads to an empty tensor, we log $0$ for display purposes, since we
-would otherwise have to work around metric logs with different step vectors.
-
-The subscriber used for recording all the information is displayed in
-\cref{lst:running_moments_sub}. A second subscriber is used to log all the
-computed metrics to a MongoDB database via the \texttt{sacred} library. While
-the cleaner approach here would be to implement a \texttt{SacredBackend} to log
-the metrics automatically, this would require some thought about the differing
-capabilities of different backends. For instance, there is no native form of
-histogram storage in \texttt{sacred}, while it is easy to provide through
-TensorBoard or Matplotlib. Therefore, this backend is left for future work and a
-Subscriber ist used instead for this limited set of experiments.
-
-\begin{lstlisting}[label={lst:running_moments_sub},
-caption={Subscriber to record Adam terms}]
-class BiasCorrectedMomentsSubscriber(PlotSubscriber):
-
-  def __init__(self, lr, beta1, beta2, eps, message_bus=get_default_bus(), tag=None, subsample=40, ylims=None, backend='tb'):
-
-    title        = 'gradient_moments'
-    ylabel       = 'Gradient Moments'
-    xlabel       = 'Train step'
-    subscription = Subscription(self, ['weight_gradients'], tag, subsample)
-    super().__init__([subscription], message_bus,
-                     {'title': title,
-                      'ylabel': ylabel,
-                      'ylims': ylims,
-                      'xlabel': xlabel},
-                     backend=backend)
-
-    # all parameters to Adam
-    self._lr    = lr
-    self._beta1 = beta1
-    self._beta2 = beta2
-    self._eps   = eps
-
-    # records of the running moment estimates
-    self._means = dict()
-    self._vars  = dict()
-
-    # here we set up all the metrics to be published
-    for pub_name in {
-      'biased_grad_mean_estimate_mean',
-      'biased_grad_mean_estimate_median',
-      'biased_grad_mean_estimate_var',
-      'biased_grad_var_estimate_mean',
-      'biased_grad_var_estimate_median',
-      'biased_grad_var_estimate_var',
-      'biased_grad_mean_estimate_norm',
-      'biased_grad_var_estimate_norm',
-      'grad_mean_estimate_mean',
-      'grad_mean_estimate_median',
-      'grad_mean_estimate_var',
-      'grad_var_estimate_mean',
-      'grad_var_estimate_median',
-      'grad_var_estimate_var',
-      'grad_mean_estimate_norm',
-      'grad_var_estimate_norm',
-      'effective_lr_mean',
-      'effective_lr_median',
-      'effective_lr_var',
-      'effective_lr_norm',
-    }:
-      self._add_publication(pub_name, type='DATA')
-
-  def compute(self, message):
-
-    named_module = message.key
-
-    grad         = message.data
-    t            = message.global_step + 1
-
-    # init moving moments if not present
-    if named_module not in self._means:
-      self._means[named_module] = torch.zeros_like(grad)
-      if named_module not in self._vars:
-        self._vars[named_module] = torch.zeros_like(grad)
-
-    exp_avg, exp_avg_sq = self._means[named_module], self._vars[named_module]
-    beta1, beta2        = self._beta1, self._beta2
-
-    exp_avg.mul_(beta1).add_(1 - beta1, grad)
-    exp_avg_sq.mul_(beta2).addcmul_(1 - beta2, grad, grad)
-
-    # we use the more efficient ordering of computation from Kingma et al. (p.
-    # 2) used in PyTorch's implementation
-    bias_correction1    = 1 - beta1 ** t
-    bias_correction2    = 1 - beta2 ** t
-    unbiased_exp_avg    = exp_avg / bias_correction1
-    unbiased_exp_avg_sq = exp_avg_sq / bias_correction2
-    step_size           = self._lr * math.sqrt(bias_correction2) / bias_correction1
-    denom               = exp_avg_sq.sqrt().add_(self._eps)
-
-    # here we basically revert the entire thing to get the effective learning
-    # rate
-    update              = step_size * exp_avg / denom
-    update.div_(grad)
-    nan_tensor          = torch.isnan(update)
-    inf_tensor          = torch.isinf(update)
-    effective_lr        = update[(1 - nan_tensor) & (1 - inf_tensor)]
-
-    # it's possible to end up with no valid values -> log 0 so plotting doesn't
-    # crash (nan may also have worked)
-    if grad.sum() == torch.tensor(0.0).cuda():
-      # this would mean all entries are nan or inf because the current gradient was
-      # zero
-      effective_lr = torch.tensor(0.0).cuda()
-
-    # instead of repeating the call to publish_module_message for each topic, look at
-    # all topic names and infer the local variable from the topic name
-    for topic in self.publications['DATA']:
-
-      if topic.startswith('biased_grad_mean'):
-        data = exp_avg
-      elif topic.startswith('biased_grad_var'):
-        data = exp_avg_sq
-      elif topic.startswith('grad_mean'):
-        data = unbiased_exp_avg
-      elif topic.startswith('grad_var'):
-        data = unbiased_exp_avg_sq
-      elif topic.startswith('effective_lr'):
-        data = effective_lr
-      else:
-        raise ValueError(f'Unexpected topic "{topic}"')
-
-      if topic.endswith('norm'):
-        data = data.norm()
-      elif topic.endswith('mean'):
-        data = data.mean()
-      elif topic.endswith('median'):
-        data = data.median()
-      elif topic.endswith('var'):
-        data = data.var()
-      else:
-        raise ValueError(f'Unexpected topic "{topic}"')
-
-      self.message_bus.publish_module_message(message.global_step,
-                                              message.train_step,
-                                              message.epoch, topic,
-                                              message.key, data)
-\end{lstlisting}
-
-The subscriber for logging the metrics is trivial:
-\begin{lstlisting}[language=Python]
-class SacredLoggingSubscriber(Subscriber):
-  '''Subscriber which logs its subscribed values with sacred's metrics API'''
-
-  def __init__(self, experiment, kinds):
-    self._experiment = experiment
-    subscription     = Subscription(self, kinds)
-    super().__init__([subscription], get_default_bus())
-
-  def compute(self, message):
-    if message.key != 'META':
-      name = f'{message.kind}.{message.key.name}'
-    else:
-      name = message.kind
-  self._experiment.log_scalar(name, float(message.data), message.global_step)
-\end{lstlisting}
-
-
-\subsection{Experiments}%
-\label{sub:experiments}
-
-The experiments conducted here all use the CIFAR10 dataset learned by a range of
-models (among them the one presumably used in \citet{kingma2014adam}). The
-dataset is whitened\footnote{Since I did not manage to implement the
-preprocessing correctly, the dataset used here is from
-\url{https://github.com/szagoruyko/wide-residual-networks}}.
-
-The convolutional network (\cref{fig:adammodel}) used by the authors is not unambigously described in
-the publication, so it cannot be guaranteed that the reproduction is accurate.
-The experiments here also omit the dropout applied to the input layer (it is
-unclear whether \citeauthor{kingma2014adam} refer to the float-converted input
-data itself, which would generally be called the input layer to or the initial
-layer of convolutions) because the network did not learn anything in that case
-and the dropout probability is not specified. We further perform the experiments
-on a fully-connected network without convolutional layers (see
-\cref{fig:fully-connected}) as well as the previously introduced VGG
-architecture (\cref{fig:vgg16}).
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
-    \caption{Probable model architecture from \citep{kingma2014adam}}
-    \label{fig:adammodel}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
-    \caption{Purely dense model}
-    \label{fig:fully-connected}
-\end{figure}
-
-We want to employ \texttt{ikkuna} to monitor the quantities in Adam's update
-rule on varous architectures. This will allow us to investigate whether there is
-a qualitative difference in how Adam operates on different architectures, as
-well as shed light on its behaviour in cases where it fails to optimise the
-network. We also track the same quantites with vanilla SGD for comparison.
-Additionally, the authors make claims in the publication without accompanying
-evidence, notably
-
-\begin{itemize}
-    \item \label{itm:adam-claim-1} Convolutional layers should be assigned a smaller learning rate than
-        linear ones and that -- presumably -- Adam does this automatically.
-    \item
-        That the update for the experiment with the convolutional network is
-        dominated by the mean estimate and $\epsilon$ while the gradient
-        variance estimate vanishes to zero after a few epochs.
-\end{itemize}
-Whether these assertions hold true will also be investigated.
-
-It should be noted that the quantities used in \cref{eq:adam} are tensor-valued,
-i.e. the estimates of the gradient moments are computed for each parameter.
-Since visualising all parameters individually is not only computationally
-infeasible, but also useless, some level of granularity with an appropriate
-summary measure needs to be defined. The next level of organisation above
-individual layer weights are the weight tensors themselves. Since layers are the
-basic building blocks, it makes sense to investigate Adam's behaviour on the
-level of individual layers. The question of how to summarise e.g. the gradient
-mean estimate for an entire layer remains. Candidates are
-\begin{enumerate}
-    \item the average over all units
-    \item the norm of the estimate
-    \item the median over all units
-\end{enumerate}
-The first option suffers from the fact that the gradient distribution is
-centered around zero, so the values for most layers empirically average out.
-The norm of the estimate on the other hand gives a sense of the total magnitude and thus the total
-change to a layer. The last option is computationally more demanding, but
-prevents the problem of outliers, while also suffering from the fact that the
-gradient distribution is mostly centered around zero. We will therefore plot the
-norm of the first moment estimate since we are mostly interested in how much
-total contribution the term has for in the update. For the second moment, we
-plot the median, since all values are larger than $1$ and thus cannot average
-out. Norm, mean and median will exhibit similar qualitative behaviour for this
-term anyway, so the choice is less critical. For plotting effective learning
-rates, we once again report the median, as they vary a lot within a layer and we
-would like to have some form of average so it fits with our concept of a
-actual learning rate.
-
-\subsubsection{Reproducing the Convnet experiment}
-
-As a start, we check whether we can successfully recreate the experiment from
-\citep{kingma2014adam} with the convolutional architecture. On p. 7 they show
-the performance of the network over the first three epochs and the entire
-training time. Our reproduction with the exact same parameters  is shown in
-\cref{fig:adam-repro}.
-
-\begin{figure}
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_1200.pdf}
-        \caption{Adam convnet with learning rate $0.001$, first three epochs}
-        \label{fig:adam-repro-1}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.001$, entire training}
-        \label{fig:adam-repro-2}
-    \end{subfigure}
-    \label{fig:adam-repro}
-\end{figure}
-
-\citeauthor{kingma2014adam} report a decrease of the training cost from $\sim
-2.2$ down to around $0.4$ over the course of the first three epochs. In our
-reproduction (\cref{fig:adam-repro-1}), the loss does not decrease that rapidly,
-but the trajectory is broadly similar, also when considering the entire training
-(\cref{fig:adam-repro-2}). Nevertheless, the original setup achieves training
-loss of less than $0.001$ while our experiment does not improve beyond $0.05$.
-In \citeauthor{kingma2014adam}'s experiment, the training loss almost saturates
-after about 20 epochs, the same holds for our reproduction. However, the
-original result shows the network gradually learning the entire time whereas
-performance basically stalls in our reproduction after 20 epochs. We can thus
-not completely reproduces the original experiment.  Possible reasons are an
-incorrectly specified architecture, a different loss function\footnote{This is
-    very unlikely, as the categorical crossentropy is almost always used for
-classification tasks, and also the absolute values are rather similar.}, or
-details of the training procedure which \citeauthor{kingma2014adam} do not
-mention.
-
-We can also see that in our experiment, the claim that
-\begin{quote}
- the second moment estimate $v_t$ vanishes to zeros after a few epochs and is
- dominated by the $\epsilon$ in [the update rule]
-\end{quote}
-does not hold true. Just as in the paper, we set $\epsilon = 10^{-8}$, but the
-median second moment estimate only vanishes for some layers and increases even
-for the first convolutional layer. Saying that the update is ``dominated'' by
-$\epsilon$ is therefore inaccurate. It is unclear how
-\citeauthor{kingma2014adam} evaluate the tensor-valued second moment estimate to
-arrive at this conclusion.
-
-We will now turn to a qualitative and quantitative evaluation of how Adam
-performs on fully-connected and convolutional architectures and whether it
-actually tunes the learning rate like \citet{kingma2014adam} suggest.
-
-\subsubsection{Behaviour of the Adam Update Rule on different Neural
-Architectures}
-\label{subsec:adam-behaviour}
-
-\cref{fig:adammodel} shows the evolution of Adam's terms and the effective
-learning rate for different base learning rates. We can see that, surprisingly,
-Adam appears very sensitive to the base learning rate, despite the fact that it
-is supposed to automatically tune it. It is curious that Adam performs best with
-the smallest learning rate and gradually worse with larger ones. We find that in
-the best-performing case, the second moment estimate does not actually vanish
-toward zero. To the contrary, gradient variance gradually increases for all
-layers througout training. Moreover, the per-layer learning rates used by Adam
-for the smaller two learning rates are quite similar (beware of the log-scale), but still a large
-performance gap exists. Their observation that the second moment estimate
-vanishes leads \citeauthor{kingma2014adam} to the hypothesis that
-\begin{quote}
-     The second moment estimate is therefore a poor
-     approximation to the geometry of the cost function in CNNs comparing to
-     fully connected network [\ldots].
-\end{quote}
-and we see here that there may be a point to this and a vanishing second moment
-is a bad sign for the learning process. The best-performing learning rate is the
-one with second moments most strongly diverging from zero. This could mean it is
-a useful metric to monitor during training and anneal the learning rate
-accordingly. The Adam update rule uses the second moment to do precisely this,
-so we can draw the conclusion that the learning rate schedule automatically
-instituted by a significant gradient variance is superior to one where the
-variance stagnates. It is not clear how to derive a
-``learning-rate-appropriateness metric'' from this finding, but it is a hint
-that the running gradient variance could play a role in such a metric.
-
-\begin{figure}
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.0005$}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.001$}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.01$}
-        \label{fig:adammodel-3}
-    \end{subfigure}
-    \label{fig:adammodel}
-\end{figure}
-
-If we consider the SGD algorithm instead (\cref{fig:adammodel-sgd}), we can see
-however, that the variance estimate does not vanish in any of the cases, but
-instead approaches its asymptote more quickly with increasing learning rate.
-This paired with the insights from \cref{fig:adammodel} hints at the importance
-of increasing gradient variances in some fashion througout training. Possibly,
-an increase in variance is correlated with layers becoming more differentiated
-and sensitive to more patterns and is thus indicative of learning progress.
-It would be interesting to perform these same experiments with batch
-normalisation applied between layers to see whether their influence -- which
-should counteract any variance increase -- invalidates this hypothesis.
-
-\begin{figure}
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.0005$, optimised with SGD}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_0001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.001$, optimised with SGD}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.01$, optimised with SGD}
-        \label{fig:adammodel-3}
-    \end{subfigure}
-    \label{fig:adammodel-sgd}
-    \caption[Adam moments with SGD]{Adam moments with SGD. The effective learning rate is not used, but
-    is what would be used in the Adam update.}
-\end{figure}
-
-The experiments above where run on the fully connected model as well (see
-\cref{fig:fully-connected}). The results are shown in
-\cref{fig:fully-connected-experiment}. The first thing we notice is that Adam
-behaves very differently in the absence of convolutional layers. Whereas we saw
-a difference in performance between learning rates of $0.0005$ and $0.001$ on
-the Convnet, the fully connected model behaves identically in both cases.
-\citeauthor{kingma2014adam} state that there is a qualitative difference between
-the gradients of dense and convolutional layers, and we see this fact
-demonstrated here, as the learning rate does not seem to affect the gradient
-distributions much, in contrast with the previous experiment.
-
-Similarly to earlier findings, we see again that Adam is in fact quite sensitive
-to the base learning rate set. Once again, a value of one order of magnitude
-beyond the best one makes performance deteriorate. In this case, the first
-moment estimate vanishes completely, leading to zero-valued gradients and no
-learning at all.
-
-\begin{figure}
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
-        \caption{Dense model with learning rate $0.0005$, optimised with Adam}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_0001_0_-1.pdf}
-        \caption{Dense model with learning rate $0.001$, optimised with Adam}
-    \end{subfigure}
-
-    \begin{subfigure}{\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_001_0_-1.pdf}
-        \caption{Dense model with learning rate $0.01$, optimised with Adam}
-    \end{subfigure}
-    \label{fig:fully-connected-experiment}
-    \caption{Adam moments on a purely dense model}
-\end{figure}
-
-One question not answered yet is \cref{itm:adam-claim-1}. From
-\cref{fig:adammodel} and \cref{fig:fully-connected-experiment} we clearly see
-that Adam does in fact tend to assigning higher learning rates to dense layers
-and lower ones to convolutions. If this heuristic were to be used for manually
-tuning SGD, it would indeed be automatically handled by Adam. Ignoring the final
-classification layer (\texttt{/classifier/linear1}) in the Convnet, this seems
-to come from the fact that dense layers exhibit a gradient variance several
-orders of magnitude smaller, while the gradient mean -- while still being
-smaller -- differs by less than one order of magnitude.
-
-We omit here the results for the fully connected model trained with SGD (because
-it learns only for the largest learning rate), as well as the larger VGG16
-convolutional architecture trained with both optimisers, since the latter
-appears to be invariant to any change and may simply be too powerful to exhibit
-large differences. See \cref{ch:appendixC} for these experiments.
-
-\subsection{Conclusion}
-
-With the experimentr performed here, we have evaluated the qualitative bahviour
-of the Adam optimisation algorithm compared to vanilla stochastic gradient
-descent on three architectures, with several learning rates. We find that Adam
-is -- in spite of its promise -- very sensitive to the learning rate and the
-correct order of magnitude must be determined beforehand. We have validated that
-it automatically assigns smaller learning rates to convolutional layers than to
-dense once, a finding in line with a popular heuristic employed manually for
-SGD. We also examined the behaviour of the second moment estimate and find that
-it appears to be related to the speed of learning, albeit not in a trivial
-fashion. A further interesting phenomenon is that median learning rates for
-individual layers can range from $10^{-3}$ all the way up to $10$, which would
-never work when applied to an entire network. More work would be necessary to
-check whether using these learning rates for SGD would achieve the same
-performance. If not, then this would prove that Adam finds qualitatively
-different paths through the weight space by incoporating past gradient
-information.
