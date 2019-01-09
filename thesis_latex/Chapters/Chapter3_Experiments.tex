@@ -924,7 +924,7 @@ Additionally, the authors make claims in the publication without accompanying
 evidence, notably
 
 \begin{itemize}
-    \item Convolutional layers should be assigned a smaller learning rate than
+    \item \label{itm:adam-claim-1} Convolutional layers should be assigned a smaller learning rate than
         linear ones and that -- presumably -- Adam does this automatically.
     \item
         That the update for the experiment with the convolutional network is
@@ -947,21 +947,25 @@ mean estimate for an entire layer remains. Candidates are
     \item the norm of the estimate
     \item the median over all units
 \end{enumerate}
-The first option suffers from the fact that the variance of the mean estimates
-is (empirically) extremely high, so that the scalar summary will be dominated by
-outliers, or be very close to zero as the magnitude of different dimensions
-average out. The norm of the estimate of course suffers from the outlier problem
-as well, but at least gives a sense of the total magnitude and thus the total
+The first option suffers from the fact that the gradient distribution is
+centered around zero, so the values for most layers empirically average out.
+The norm of the estimate on the other hand gives a sense of the total magnitude and thus the total
 change to a layer. The last option is computationally more demanding, but
 prevents the problem of outliers, while also suffering from the fact that the
-gradient distribution is mostly centered around zero. However, we will first use
-the median since it is an intuitive summary and the variance estimate and
-effective learning rate do not have the zero-centeredness problem.
+gradient distribution is mostly centered around zero. We will therefore plot the
+norm of the first moment estimate since we are mostly interested in how much
+total contribution the term has for in the update. For the second moment, we
+plot the median, since all values are larger than $1$ and thus cannot average
+out. Norm, mean and median will exhibit similar qualitative behaviour for this
+term anyway, so the choice is less critical. For plotting effective learning
+rates, we once again report the median, as they vary a lot within a layer and we
+would like to have some form of average so it fits with our concept of a
+actual learning rate.
 
 \subsubsection{Reproducing the Convnet experiment}
 
 As a start, we check whether we can successfully recreate the experiment from
-\citet{kingma2014adam} with the convolutional architecture. On p. 7 they show
+\citep{kingma2014adam} with the convolutional architecture. On p. 7 they show
 the performance of the network over the first three epochs and the entire
 training time. Our reproduction with the exact same parameters  is shown in
 \cref{fig:adam-repro}.
@@ -969,14 +973,14 @@ training time. Our reproduction with the exact same parameters  is shown in
 \begin{figure}
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel/adammodel_adam_0001_0_1200.pdf}
-        \caption{Adam convnet with learning rate $0.0005$, first three epochs}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_1200.pdf}
+        \caption{Adam convnet with learning rate $0.001$, first three epochs}
         \label{fig:adam-repro-1}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel/adammodel_adam_0001_0_-1.pdf}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.001$, entire training}
         \label{fig:adam-repro-2}
     \end{subfigure}
@@ -988,11 +992,192 @@ training time. Our reproduction with the exact same parameters  is shown in
 reproduction (\cref{fig:adam-repro-1}), the loss does not decrease that rapidly,
 but the trajectory is broadly similar, also when considering the entire training
 (\cref{fig:adam-repro-2}). Nevertheless, the original setup achieves training
-loss of less than $0.001$ while our experiment does not improve beypng $0.05$.
-In \citeauthor{kingma2014adam}'s experiment, the
-training loss almost saturates after about 20 epochs, the same holds for our
-reproduction. However, the original result shows the network gradually learning
-the entire time whereas performance basically stalls in our reproduction after
-20 epochs. We can thus not completely reproduces the original experiment.
-Possible reasons are an incorrectly specified architecture, or details of the
-training procedure which \citeauthor{kingma2014adam} do not mention.
+loss of less than $0.001$ while our experiment does not improve beyond $0.05$.
+In \citeauthor{kingma2014adam}'s experiment, the training loss almost saturates
+after about 20 epochs, the same holds for our reproduction. However, the
+original result shows the network gradually learning the entire time whereas
+performance basically stalls in our reproduction after 20 epochs. We can thus
+not completely reproduces the original experiment.  Possible reasons are an
+incorrectly specified architecture, a different loss function\footnote{This is
+    very unlikely, as the categorical crossentropy is almost always used for
+classification tasks, and also the absolute values are rather similar.}, or
+details of the training procedure which \citeauthor{kingma2014adam} do not
+mention.
+
+We can also see that in our experiment, the claim that
+\begin{quote}
+ the second moment estimate $v_t$ vanishes to zeros after a few epochs and is
+ dominated by the $\epsilon$ in [the update rule]
+\end{quote}
+does not hold true. Just as in the paper, we set $\epsilon = 10^{-8}$, but the
+median second moment estimate only vanishes for some layers and increases even
+for the first convolutional layer. Saying that the update is ``dominated'' by
+$\epsilon$ is therefore inaccurate. It is unclear how
+\citeauthor{kingma2014adam} evaluate the tensor-valued second moment estimate to
+arrive at this conclusion.
+
+We will now turn to a qualitative and quantitative evaluation of how Adam
+performs on fully-connected and convolutional architectures and whether it
+actually tunes the learning rate like \citet{kingma2014adam} suggest.
+
+\subsubsection{Behaviour of the Adam Update Rule on different Neural
+Architectures}
+\label{subsec:adam-behaviour}
+
+\cref{fig:adammodel} shows the evolution of Adam's terms and the effective
+learning rate for different base learning rates. We can see that, surprisingly,
+Adam appears very sensitive to the base learning rate, despite the fact that it
+is supposed to automatically tune it. It is curious that Adam performs best with
+the smallest learning rate and gradually worse with larger ones. We find that in
+the best-performing case, the second moment estimate does not actually vanish
+toward zero. To the contrary, gradient variance gradually increases for all
+layers througout training. Moreover, the per-layer learning rates used by Adam
+for the smaller two learning rates are quite similar (beware of the log-scale), but still a large
+performance gap exists. Their observation that the second moment estimate
+vanishes leads \citeauthor{kingma2014adam} to the hypothesis that
+\begin{quote}
+     The second moment estimate is therefore a poor
+     approximation to the geometry of the cost function in CNNs comparing to
+     fully connected network [\ldots].
+\end{quote}
+and we see here that there may be a point to this and a vanishing second moment
+is a bad sign for the learning process. The best-performing learning rate is the
+one with second moments most strongly diverging from zero. This could mean it is
+a useful metric to monitor during training and anneal the learning rate
+accordingly. The Adam update rule uses the second moment to do precisely this,
+so we can draw the conclusion that the learning rate schedule automatically
+instituted by a significant gradient variance is superior to one where the
+variance stagnates. It is not clear how to derive a
+``learning-rate-appropriateness metric'' from this finding, but it is a hint
+that the running gradient variance could play a role in such a metric.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.0005$}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.01$}
+        \label{fig:adammodel-3}
+    \end{subfigure}
+    \label{fig:adammodel}
+\end{figure}
+
+If we consider the SGD algorithm instead (\cref{fig:adammodel-sgd}), we can see
+however, that the variance estimate does not vanish in any of the cases, but
+instead approaches its asymptote more quickly with increasing learning rate.
+This paired with the insights from \cref{fig:adammodel} hints at the importance
+of increasing gradient variances in some fashion througout training. Possibly,
+an increase in variance is correlated with layers becoming more differentiated
+and sensitive to more patterns and is thus indicative of learning progress.
+It would be interesting to perform these same experiments with batch
+normalisation applied between layers to see whether their influence -- which
+should counteract any variance increase -- invalidates this hypothesis.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.0005$, optimised with SGD}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_0001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.001$, optimised with SGD}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
+        \caption{Adam convnet with learning rate $0.01$, optimised with SGD}
+        \label{fig:adammodel-3}
+    \end{subfigure}
+    \label{fig:adammodel-sgd}
+    \caption[Adam moments with SGD]{Adam moments with SGD. The effective learning rate is not used, but
+    is what would be used in the Adam update.}
+\end{figure}
+
+The experiments above where run on the fully connected model as well (see
+\cref{fig:fully-connected}). The results are shown in
+\cref{fig:fully-connected-experiment}. The first thing we notice is that Adam
+behaves very differently in the absence of convolutional layers. Whereas we saw
+a difference in performance between learning rates of $0.0005$ and $0.001$ on
+the Convnet, the fully connected model behaves identically in both cases.
+\citeauthor{kingma2014adam} state that there is a qualitative difference between
+the gradients of dense and convolutional layers, and we see this fact
+demonstrated here, as the learning rate does not seem to affect the gradient
+distributions much, in contrast with the previous experiment.
+
+Similarly to earlier findings, we see again that Adam is in fact quite sensitive
+to the base learning rate set. Once again, a value of one order of magnitude
+beyond the best one makes performance deteriorate. In this case, the first
+moment estimate vanishes completely, leading to zero-valued gradients and no
+learning at all.
+
+\begin{figure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
+        \caption{Dense model with learning rate $0.0005$, optimised with Adam}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_0001_0_-1.pdf}
+        \caption{Dense model with learning rate $0.001$, optimised with Adam}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_001_0_-1.pdf}
+        \caption{Dense model with learning rate $0.01$, optimised with Adam}
+    \end{subfigure}
+    \label{fig:fully-connected-experiment}
+    \caption{Adam moments on a purely dense model}
+\end{figure}
+
+One question not answered yet is \cref{itm:adam-claim-1}. From
+\cref{fig:adammodel} and \cref{fig:fully-connected-experiment} we clearly see
+that Adam does in fact tend to assigning higher learning rates to dense layers
+and lower ones to convolutions. If this heuristic were to be used for manually
+tuning SGD, it would indeed be automatically handled by Adam. Ignoring the final
+classification layer (\texttt{/classifier/linear1}) in the Convnet, this seems
+to come from the fact that dense layers exhibit a gradient variance several
+orders of magnitude smaller, while the gradient mean -- while still being
+smaller -- differs by less than one order of magnitude.
+
+We omit here the results for the fully connected model trained with SGD (because
+it learns only for the largest learning rate), as well as the larger VGG16
+convolutional architecture trained with both optimisers, since the latter
+appears to be invariant to any change and may simply be too powerful to exhibit
+large differences. See \cref{ch:appendixC} for these experiments.
+
+\subsection{Conclusion}
+
+With the experimentr performed here, we have evaluated the qualitative bahviour
+of the Adam optimisation algorithm compared to vanilla stochastic gradient
+descent on three architectures, with several learning rates. We find that Adam
+is -- in spite of its promise -- very sensitive to the learning rate and the
+correct order of magnitude must be determined beforehand. We have validated that
+it automatically assigns smaller learning rates to convolutional layers than to
+dense once, a finding in line with a popular heuristic employed manually for
+SGD. We also examined the behaviour of the second moment estimate and find that
+it appears to be related to the speed of learning, albeit not in a trivial
+fashion. A further interesting phenomenon is that median learning rates for
+individual layers can range from $10^{-3}$ all the way up to $10$, which would
+never work when applied to an entire network. More work would be necessary to
+check whether using these learning rates for SGD would achieve the same
+performance. If not, then this would prove that Adam finds qualitatively
+different paths through the weight space by incoporating past gradient
+information.
