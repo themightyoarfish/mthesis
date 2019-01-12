@@ -14,7 +14,8 @@ The chapter is divided between a reproduction part (see
 \cref{sec:adam}) and an original research part (see
 \cref{sec:detecting_learning_rate_proprocess} and
 \cref{sec:detecting_layer_saturation}). In the former, experiments conducted
-for a popular variant of stochastic gradient descent are reproduced and extended with
+for a popular variant of stochastic gradient descent (hence referred to as SGD
+) are reproduced and extended with
 the help of the library. The goal is to fact-check claims made by the authors
 and validate said claims on more scenarios than are shown in the
 publication. This will serve to show how \texttt{ikkuna} could have been
@@ -106,14 +107,14 @@ and variance of the gradient around the current point in parameter space. This
 estimate is computed for each parameter, meaning Adam incurs a memory overhead
 of $\mathcal{O}(d)$ where $d$ is the number of model parameters. Since the
 estimates are initialised with zero, a bias correction (denoted by
-$\widehat{\cdot}$) is applied.
+$\widehat{\cdot}$~) is applied.
 
 The parameter updates are computed as
-\begin{align*}
+\begin{align}
     \theta_t \leftarrow \theta_{t-1}  - \eta \frac{\widehat{m}_t}{\sqrt{\widehat{v}_t} +
     \epsilon}
     \label{eq:adam}
-\end{align*}
+\end{align}
 \citeauthor{kingma2014adam} justify the rule like this:
 \begin{quote}
     With a smaller SNR [quotient of mean and square root of variance] the
@@ -342,14 +343,14 @@ architecture (\cref{fig:vgg16}).
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
-    \caption{Probable model architecture from \citep{kingma2014adam}}
+    \includegraphics[width=.8\linewidth]{gfx/diagrams/neural_network/adammodel.pdf}
+    \caption{Probable Adam model architecture}
     \label{fig:adammodel}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
+    \includegraphics[width=.8\linewidth]{gfx/diagrams/neural_network/fullyconnected.pdf}
     \caption{Purely dense model}
     \label{fig:fully-connected}
 \end{figure}
@@ -604,7 +605,7 @@ large differences. See \cref{ch:appendixC} for these experiments.
 
 \subsection{Conclusion}
 
-With the experimentr performed here, we have evaluated the qualitative bahviour
+With the experiments performed here, we have evaluated the qualitative behaviour
 of the Adam optimisation algorithm compared to vanilla stochastic gradient
 descent on three architectures, with several learning rates. We find that Adam
 is -- in spite of its promise -- very sensitive to the learning rate and the
@@ -636,7 +637,7 @@ more experiments than \citet{kingma2014adam} provided.
 \label{sub:ratio_adaptive_learning_rate_scheduling}
 
 The first problem to be investigated is that of choosing an appropriate learning
-rated. We begin with a brief review of gradient descent and then evaluate how
+rate. We begin with a brief review of gradient descent and then evaluate how
 the update-to-weight ratio of model weights can be used to identify bad learning
 rates or automate learning rate selection.
 
@@ -672,7 +673,7 @@ the same rate.
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/alexnetmini_sgd_fixed_ratio_01.pdf}
     \caption[Fixed-Ratio optimisation with AlexNetMini on CIFR10]{AlexNetMini on CIFAR10 at $0.1$ learning rate. The blue line is
     vanilla SGD while the green one is obtained by scaling the gradients to have
-the updates meet a target ratio of $10^{-3}$}
+the updates meet a target ratio of $10^{-3}$.}
     \label{fig:fixed-ratio-opt}
 \end{figure}
 
@@ -684,7 +685,7 @@ compared to fixing each update to the same value.
 
 The experimental setup uses the simplified AlexNet architecture
 (\cref{sec:pack-models}) shown in \cref{fig:alexnetmini}. The dataset used is
-the well-known CIFAR-10 dataset consisting of $60.000$ $32\times32$ colour images
+the well-known CIFAR-10 dataset consisting of $60,000$ $32\times32$ colour images
 from ten object categories \citep{krizhevsky2009learning}. The optimisation
 algorithm used is plain stochastic gradient descent on minibatches of size $128$. The
 dataset does not constitute a hard problem to solve; state of the art accuracies
@@ -766,7 +767,7 @@ schedule is that the average ratio between the weight updates and the weights
 moves towards the target range.  It should be noted that this update rule biases
 the learning rate in favour of the smaller layers since all ratios are weighted
 equally, regardless of the number of weights.
-\cref{fig:schedule-accuracies} displays a set of accuracy traces for each of the
+\Cref{fig:schedule-accuracies} displays a set of accuracy traces for each of the
 schedules (constant, exponential decay, ratio-adaptive) with different base
 learning rates. The network was trained from scratch $5$ times for each combination.
 
@@ -852,7 +853,7 @@ class RatioLRSubscriber(PlotSubscriber):
             R_ik_1          = self._ratios[i]
             gamma           = self._smoothing
             self._ratios[i] = gamma * R_ik + (1 - gamma) * R_ik_1
-        elif message-kind == 'batch_started':
+        elif message.kind == 'batch_started':
             # before a batch starts, update the lr multiplier
             self._factor = self._compute_lr_multiplier()
 
@@ -893,12 +894,14 @@ kernel.
     \label{fig:vgg16}
 \end{figure}
 
-In the following figures, we plot the loss traces and their inverse derivative
+In the following figures, we plot the loss traces and their negative
+derivative\footnote{Erratum: The plots incorrectly refer to the ``inverse``
+derivative.}
 (the amount of decrease) in the upper right, the average weight-update ratio in
 the lower right, and a scatter plot of ratio versus loss decrease on the left.
 The scatter plot has the time step colour-coded (blue is early, red is late) and
 in addition offsets according to time on the $z$-axis. Due to the number of
-points (up to $30.000$ time steps times the number of runs), the plots have been
+points (up to $30,000$ time steps times the number of runs), the plots have been
 subsampled where many points overlap. This was necessary to render the data for
 this document. Care has been taken to not destroy the topology of the data.  The
 density in a given area may thus not be entirely accurate. In the UW ratio
@@ -906,12 +909,12 @@ plots, the line displayed is the average over multiple runs.
 
 \subsubsection{VGG with Stochastic Gradient Descent}
 
-The plots in for this network only show the first $10.000$ training steps since
+The plots in for this network only show the first $10,000$ training steps since
 nothing of note happens afterwards. Since most of the ratio values cluster
 around the same values towards the end of training, logarithmic subsampling was
 applied.  For the VGG network, we observe a smooth decrease in the training loss
 alongside a decrease in the average update-to-weight ratio. Training basically
-stalls after around $10.000$ steps (about $25$ epochs).  We observe the trend
+stalls after around $10,000$ steps (about $25$ epochs).  We observe the trend
 that the UW ratio is initially fairly high and falls off subsequently, which
 correlates with a decrease in loss. However, there is no particular value of the
 ratio that exhibits any significant correlations beyond other values. The
@@ -929,12 +932,12 @@ preliminary conclusion, we can affirm that there is no linear correlation
 between the ratio and the decrease in loss.
 
 Furthermore, the smallest of the evaluated learning rates converges fastest.
-The loss flatlines at $0$ after little more than $4000$ steps while the larger
+The loss flatlines at $0$ after little more than $4,000$ steps, while the larger
 learning rates need proportionally more time. The difference is marginal
 however. The phenomenon might relate to the motivation for annealing the
 learning rate: As we approach a local minimum, we need smaller learning rates to
 not jump over it in a different direction in every update, but slowly fall into
-the minimum itself. This may be an indication that an appropriate learning rate
+the minimum itself instead. This may be an indication that an appropriate learning rate
 for this particular problem is $\le 0.01$. None of the configurations exhibit UW
 ratios close to Karpathy's suggestion of $10^{-3}$, but with the smallest
 learning rate, we get closest, and converge fastest. Perhaps this could motivate
@@ -1070,7 +1073,7 @@ results, as the network does not converge within $75$ epochs.
 The same experiment on the ResNet18 architecture exhibited the same qualitative
 behaviour as the VGG network, except for a larger variance in loss decreases for
 a given ratio value. Slicing the training into pieces and graphing every slice
-of $5000$ training steps separately reveals nothing beyond a decrease in
+of $5,000$ training steps separately reveals nothing beyond a decrease in
 absolute value of ratio and loss, which is expected. Any correlations between
 the two quantities do not change after the initial few steps.
 
@@ -1088,7 +1091,7 @@ We now want to check how the UW ratio relates to the loss when we attempt to
 artificially fix the ratio value to a target of $0.001$. Since the updates to the
 weights in vanilla SGD (see \cref{sec:review_stochastic_gradient_descent}) are a
 function of the learning rate and the gradient magnitude, this could be done in
-one of two ways
+one of two ways:
 \begin{enumerate}
     \item Scale the gradients with the constant learning rate in mind
     \item Set the learning rate according to the ratio-adaptive schedule from
@@ -1186,5 +1189,5 @@ much time in, or reduce parameter oscillations in the face of highly noisy loss
 surfaces.
 
 With the help of \texttt{ikkuna}, one could easily implement a ratio-based
-learning rate schedule with e.g. exponential decay built-in an test its
+learning rate schedule with e.g. exponential decay built-in and test its
 performance on a wide range of models and datasets.

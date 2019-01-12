@@ -64,7 +64,7 @@ be used for directing the gradient descent process (\citet{alain2018negative}
 tentatively find that largest decreases of the loss can often be made when
 stepping along the most negative eigendirection, i.e. the most negative
 curvature), but this would be an active intervention into the training, which is
-not the goal of the library. More practically however, the hessian eigenvalues
+not the goal of the library. More practically however, the Hessian eigenvalues
 carry information about the sharpness of a local minimum and could be used for
 diagnosing stability of the current mimiser, which is relevant both for
 generalisation ability and resilience against adversarial attacks (inputs
@@ -77,11 +77,11 @@ eigenvalues of the Hessian. It is unclear if an absolute value can be determined
 for a given model and loss function at which the recommendation to reduce the
 batch size can be made, but this is an interesting area for future research.
 Analogously to \cref{sub:effects_update_to_weight_ratio_on_training_loss} one
-could employ \texttt{ikkuna} to track the largest hessian eigenvalue and a an
+could employ \texttt{ikkuna} to track the largest Hessian eigenvalue and a an
 adversarial susceptibility score. The score could be computed as the average
 decrease in accuracy over a set of image pairs where one of each pair is
 adversarially perturbed. We can then discover correlations between metrics such
-as the dominant hessian eigenvalue and the vulnerability of a model to
+as the dominant Hessian eigenvalue and the vulnerability of a model to
 adversarial attacks.
 
 
@@ -102,5 +102,5 @@ detect when a layer is too large or too small, we could either abort and restart
 training with a smaller architecture, thus saving time on iteration, or even
 resize layers live. It is not obvious how to do this properly, since only the
 insignificant components of a layer should be removed. We would need to identify
-a projection of weight matrices on a lower-dimennsional subspace that does not
+a projection of weight matrices on a lower-dimensional subspace that does not
 cancel all progress made throughout training.
