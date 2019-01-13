@@ -620,7 +620,9 @@ never work when applied to an entire network. More work would be necessary to
 check whether using these learning rates for SGD would achieve the same
 performance. If not, then this would prove that Adam finds qualitatively
 different paths through the weight space by incoporating past gradient
-information.
+information. Reason to believe that this is indeed the case is supported by
+\citet{NIPS2018_7815} who find that the representations learned by the same
+network with different learning rates are qualitatively different.
 
 The \texttt{ikkuna} library was used to extract all metrics during training and
 log them to a database. While code for the experimental setup had to be written,
