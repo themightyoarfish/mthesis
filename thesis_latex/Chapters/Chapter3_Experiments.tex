@@ -5,10 +5,11 @@ This chapter serves the purpose of showcasing the library and validating its
 usefulness for actual deep learning research. While the ultimate goal is to have
 a set of well-researched metrics in place which can be used live during
 training, the way to acquire these metrics requires extensive analysis from many
-experiments. Therefore, the goal of this work is to obtain such metrics, not
-actually use them. This entails that the library is used primarily for easily
-gathering all the data from the necessary experiments, and not for supervising
-the actual training.
+experiments. Therefore, the goal of this work is to research candidate metrics,
+not actually use them to improve any particular model's performance on any
+specific problem. This entails that the library is used primarily for easily
+gathering all the data from the necessary experiments and computing candidate
+metrics, and not for supervising the actual training.
 
 The chapter is divided between a reproduction part (see
 \cref{sec:adam}) and an original research part (see
@@ -40,7 +41,7 @@ In this section, we briefly survey the stochastic gradient descent algorithm.
 This algorithm is used (in some variant) for virtually all practical deep
 learning models. The name derives from the fact that the model parameters are
 updated in the direction of the negative gradient, which is the high-dimensional
-derivative of the scalar loss function with respect to the model parameters. It
+partial derivative of the scalar loss function with respect to the model parameters. It
 is stochastic as it only uses a subset of the training data at every time step
 and thus only approximates the true gradient which would have to be computed
 over the entire dataset to be learned.
@@ -452,9 +453,9 @@ We can also see that in our experiment, the claim that
 does not hold true. Just as in the paper, we set $\epsilon = 10^{-8}$, but the
 median second moment estimate only vanishes for some layers and increases even
 for the first convolutional layer. Saying that the update is ``dominated'' by
-$\epsilon$ is therefore inaccurate. It is unclear how
-\citeauthor{kingma2014adam} evaluate the tensor-valued second moment estimate to
-arrive at this conclusion.
+$\epsilon$ may therefore be inaccurate, at least we cannot show this to be the
+case. It is unclear how \citeauthor{kingma2014adam} evaluate the tensor-valued
+second moment estimate to arrive at this conclusion.
 
 We will now turn to a qualitative and quantitative evaluation of how Adam
 performs on fully-connected and convolutional architectures and whether it
@@ -464,7 +465,7 @@ actually tunes the learning rate like \citet{kingma2014adam} suggest.
 Architectures}
 \label{subsec:adam-behaviour}
 
-\cref{fig:adammodel} shows the evolution of Adam's terms and the effective
+\Cref{fig:adammodel} shows the evolution of Adam's terms and the effective
 learning rate for different base learning rates. We can see that, surprisingly,
 Adam appears very sensitive to the base learning rate, despite the fact that it
 is supposed to automatically tune it. It is curious that Adam performs best with

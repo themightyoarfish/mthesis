@@ -43,9 +43,15 @@ research. An overview of the workings of a neural network is given in
 \hypertarget{sec:anns}{%
 \section{Artificial Neural Networks}\label{sec:anns}}
 
+For the reader's benefit, a brief introduction to artificial neural networks is
+presented here, which may safely be skipped or replaced by other resources.
+
+\subsection*{A Brief History of Neural Networks}%
+
 The artificial neural network is a class of machine learning model which can be
-used for regression, classification, generation and a host of other tasks.  At
-its core, neuronal models are simply conceptualised as an arrangement of units
+used for prediction tasks like regression and classification, as well as for
+generation and enhancement of data.  At
+the core, neural models are simply conceptualised as an arrangement of units
 which receive numerical inputs, compute a weighted sum and thus produce an output
 activation. The ideas date back at least to Hebbian learning (a single neuron)
 in the 1940s, and were developed into the Perceptron model by
@@ -60,13 +66,56 @@ subsequently, gpu-accelerated linear algebra libraries with automatic
 differentiation -- finally made neural networks the workhorse for many AI
 applications today.
 
+\subsection*{A Brief Primer on Neural Networks}%
+
 A neural network consists of at least one input layer, \(0-n\)
 intermediate layers and at least one output layer. Data is processed in
 numerical form by multiplying it with the input layer's weights, mapping
 each product with the input layer's activation function and then
 propagating the resulting activations through subsequent layers in the
 same fashion. \Cref{fig:neuralnet} gives a graphical representation of a
-multi-layer feedforward network.
+multi-layer feedforward network, the simplest form of neural network.
+Mathematically, such a model corresponds to a set of weight matrices
+$\mathcal{W} = \{W_i \mid W \in \mathbf{R}^{n_{i-1} \times n_i}\}$ where $n_i$
+is the number of units in layer $i$. Each layer can have an associated bias
+vector that is added to the output. The computation performed by layer $i$ on
+the previous layer's output is
+thus
+\begin{align}
+    f_i(\mathbf{x}) = W_i \mathbf{x} + b_i
+\end{align}
+
+If only matrix multiplication and vector addition was used, a multi-layer network would be no more
+powerful than a single-layer one as the composition of many affine
+transformations can be expressed by a single one. Therefore, a nonlinear
+\emph{activation function} is applied component-wise to each layer's output. The
+nonlinearity is crucial to deeper networks superior capabilities. Many
+activation functions have been proposed, for instance the hyperbolic tangent,
+the sigmoid or the rectified linear unit, the latter in many variations.
+
+\pgfmathdeclarefunction{sigmoid}{0}{%
+    \pgfmathparse{1/(1+exp(-x))}%
+}
+\pgfmathdeclarefunction{relu}{0}{%
+    \pgfmathparse{((x<0) * 0 + (x>=0) * x)}%
+}
+\begin{center}
+    \begin{tikzpicture}[
+            declare function={
+                func(\x) = (\x<0) * (0)  +  (\x>=0) * (\x);
+            }
+        ]
+        \begin{groupplot}[group style={group size= 3 by 1}, ymin=-1, ymax=2, xmin=-5,
+            xmax=5, width=.32\linewidth, tick label style={font=\tiny}]
+            \nextgroupplot
+            \addplot[verydarkblue] {sigmoid};
+            \nextgroupplot
+            \addplot[reddish] {tanh(x)};
+            \nextgroupplot
+            \addplot[yellowish] {func(x)};
+        \end{groupplot}
+    \end{tikzpicture}
+\end{center}
 
 \begin{figure}
     \hypertarget{fig:neuralnet}{%
@@ -100,8 +149,10 @@ The objective of this work is twofold:
         architecture
     \item
         Perform experiments on common datasets to investigate whether common
-        problems in neural network training can be detected by the use of
-        appropriate metrics. Issues which could be investigated include, but are
+        problems in neural network training can be detected on-line by the use of
+        appropriate metrics. In other words, the library shall be used to
+        verify or falsify that training dynamics can be analyzed during
+        training. Issues which could be investigated include, but are
         not limited to
         \begin{itemize}
             \item
@@ -139,7 +190,7 @@ factoring in the fact that some parameters can change over time, such as
 
 \begin{itemize}
     \item
-        learning rate (can be annealed)
+        learning rate (can vary according to some schedule)
     \item
         batch size\footnote{It is not usual to change the batch size during
             training, but it can have an effect similar annealing the learning
@@ -153,7 +204,7 @@ Other parameters that need to be set initially are
 
 \begin{itemize}
     \item
-        Network architecture (how many layers, how many units per layer,
+        network architecture (how many layers, how many units per layer,
         what kind of layers)
     \item
         nonlinearity function for each layer
@@ -168,7 +219,7 @@ Other parameters that need to be set initially are
     \item
         weight decay
     \item
-        Regularisation methods for the weights
+        regularisation methods for the weights
 \end{itemize}
 
 This makes finding an optimal training regimen very hard, particularly since
@@ -227,7 +278,7 @@ training metrics.
 In summary, this library is supposed to be both a developer tool, reducing
 implementation effort and decreasing opacity of the training process, and a
 research tool for abstracting away some of the nuisances of machine learning
-experimentation and simplifying experiments for live metrics in neural networks.
+experimentation and simplifying experiments on new live metrics in neural networks.
 
 \hypertarget{sec:existing-apps}{%
 \section{Existing Applications}\label{sec:existing-apps}}
@@ -243,7 +294,8 @@ TensorBoard is a visulisation toolkit originally developed for the TensorFlow
 Python library for exporting data from the training process and a web server
 which reads the serialised data and displays it in the browser. The server can
 be used independently from TensorFlow, provided the data is serialised in the
-appropriate format. This enables, e.g., a PyTorch port, termed TensorBoardX.
+appropriate format. This enables, e.g., a PyTorch port -- termed TensorBoardX -- to
+use TensorBoard from frameworks other than TensorFlow.
 
 For exporting data during training, the developer adds operations to the
 graph which write scalars, histograms, audio, or other data

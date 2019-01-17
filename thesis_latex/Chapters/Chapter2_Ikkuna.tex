@@ -52,7 +52,8 @@ extending the library to different deep learning frameworks, but it is also a
 prerequisite for allowing for modular, self-contained visualisations or metrics
 which can be installed and used separately and independently of specific model
 code. The Publisher-Subscriber design pattern has been chosen for these reasons
-(\cref{sec:pubsub}).
+(\cref{sec:pubsub}) and the fact that it is conceptually simple and thus easy to
+implement and understand by other developers interested in the library.
 
 \hypertarget{sec:dl-frameworks}{%
 \section{Deep Learning frameworks}\label{sec:dl-frameworks}}
@@ -318,7 +319,9 @@ locally which have access to the \lstinline+Exporter+ instance -- so it can
             data -- optionally with running means and variances over the
             previous training steps. The variance is not defined for
             single data point enters the layer, as could be the case during
-            inference/testing time. The second case is the dropout layer, which
+            inference/testing time. The layer therefore stores running estimates
+            of mean an variance during training and uses them during test time.
+            The second case is the dropout layer, which
             randomly zeroes out a percentage of the previous layer's
             activations. This is used during training to prevent subsequent
             units from becoming correlated with a fixed set of units in the
@@ -795,7 +798,7 @@ Stockholm, Sweden. Peltarion's stated mission is to
     [provide] an
     operational AI platform for producing real-world AI applications at scale and at
     speed.
-\end{quote}
+\end{quote}\footnote{\url{https://www.peltarion.com/about}, accessed 17/01/19}
 
 The Peltarion platform is a web-based deep learning platform with which users
 can upload, preprocess and modify datasets, create deep neural architectures
