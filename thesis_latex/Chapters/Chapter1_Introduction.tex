@@ -92,6 +92,7 @@ transformations can be expressed by a single one. Therefore, a nonlinear
 nonlinearity is crucial to deeper networks superior capabilities. Many
 activation functions have been proposed, for instance the hyperbolic tangent,
 the sigmoid or the rectified linear unit, the latter in many variations.
+\Cref{fig:activation_functions} shows plots for these functions.
 
 \pgfmathdeclarefunction{sigmoid}{0}{%
     \pgfmathparse{1/(1+exp(-x))}%
@@ -99,7 +100,8 @@ the sigmoid or the rectified linear unit, the latter in many variations.
 \pgfmathdeclarefunction{relu}{0}{%
     \pgfmathparse{((x<0) * 0 + (x>=0) * x)}%
 }
-\begin{center}
+\begin{figure}
+    \centering
     \begin{tikzpicture}[
             declare function={
                 func(\x) = (\x<0) * (0)  +  (\x>=0) * (\x);
@@ -107,15 +109,17 @@ the sigmoid or the rectified linear unit, the latter in many variations.
         ]
         \begin{groupplot}[group style={group size= 3 by 1}, ymin=-1, ymax=2, xmin=-5,
             xmax=5, width=.32\linewidth, tick label style={font=\tiny}]
-            \nextgroupplot
+            \nextgroupplot[title=sigmoid]
             \addplot[verydarkblue] {sigmoid};
-            \nextgroupplot
+            \nextgroupplot[title=tanh]
             \addplot[reddish] {tanh(x)};
-            \nextgroupplot
+            \nextgroupplot[title=ReLU]
             \addplot[yellowish] {func(x)};
         \end{groupplot}
     \end{tikzpicture}
-\end{center}
+    \caption{Shapes of different activation functions}
+    \label{fig:activation_functions}
+\end{figure}
 
 \begin{figure}
     \hypertarget{fig:neuralnet}{%
@@ -283,8 +287,32 @@ experimentation and simplifying experiments on new live metrics in neural networ
 \hypertarget{sec:existing-apps}{%
 \section{Existing Applications}\label{sec:existing-apps}}
 
-There exist a variety of libraries for machine learning visualisation which we
-will briefly survey in this section.
+There exist a variety of libraries for machine learning visualisation and online
+metric tracking which we will briefly survey in this section.
+
+\hypertarget{ignite}{%
+\subsection*{PyTorch Ignite}\label{ignite}}
+
+The project perhaps closest to \texttt{ikkuna} in spirit is PyTorch's
+\texttt{ignite} subproject\footnote{\url{https://pytorch.org/ignite/}}. It
+defines abstractions for simplifing the setup of the training loop and for
+automatically computing metrics when events happen. It also encapsulates metrics
+into separate classes so they can be used on any model.  \texttt{ignite} per
+default only includes events for beginning and end of iterations or epochs, but
+custom events can be registered by the user.  \texttt{ikkuna}, on the other
+hand, will provide more fine-grained information on the level of individual
+layers, which is much more than \texttt{ignite} does. With respect to
+ergonomics, \texttt{ignite} is simpler to use due to the fact that metrics are
+registered by the help of function decorators on plain functions, while
+\texttt{ikkuna} requires implementation of a dedicated subscriber.
+\texttt{ignite} also does not provide any visualisation capabilities out of the
+box.
+
+We can thus summarise that \texttt{ikkuna} is focused more on collaboration
+accross projects thorugh it's plugin-based structure while \texttt{ignite} is a
+less powerful but simpler to use tool for removing boilerplate in one specific
+application, as it has no notion of reusing metrics outside of where they were
+defined.
 
 \hypertarget{tensorboard}{%
 \subsection*{TensorBoard}\label{tensorboard}}
