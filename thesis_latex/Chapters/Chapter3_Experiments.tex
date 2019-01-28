@@ -1198,6 +1198,134 @@ performance on a wide range of models and datasets.
 \section{Measuring Layer Saturation for Early Stopping}%
 \label{sec:detecting_layer_saturation}
 
+As a last study, we want to investigate an approach for automatically detecting
+when a good time for stopping parameter updates for a layer comes around. In
+other words, we are concerned with \emph{freeze training} in which we freeze
+layers according to some criterion, thus saving computation time during the
+backward pass. This only makes sense, however, if we do not lose validation
+accuracy this way.
+
+The term ``early stopping`` generally refers to halting training completely
+based on some criterion, often derived from the current training and validation
+accuracy of the model. It is used to avoid overfitting the model to the dataset
+by iterating over the dataset too often, until the model essentially memorises
+the data. In contrast, we use the term for the more fine-grained approach to
+freezing individual layers at points during training.
+
+\subsection{Background}%
+\label{sub:saturation-background}
+
+Recently, the idea of saving computation by progressively freezing layers has
+been put forth by \citet{brock2017freezeout}. They use individual decaying
+learning rates for each layer so that the rate drops to zero at some point in
+training. Different schedules for annealing the learning rates are investigated
+and tradeoffs between validation accuracy and computational savings are
+reported. The results are that up to $20\%$ of total training time can be saved
+with less than $3\%$ loss in accuracy for DenseNets \citep{huang2017densely} and
+ResNets \citep{he2016deep} while a VGG variant does not show the same promise.
+\citeauthor{brock2017freezeout} hypothesise that skip-connections play an
+important role for enabling a good time-accuracy tradeoff, as they are not
+present in the fully convolutional VGG model.
+
+The approach investigated in this section draws inspiration from
+\citep{raghu2017svcca}, where a similarity measure between the representations
+learned by different layers in the same or different neural networks is defined
+an evaluated. \citeauthor{raghu2017svcca}'s experiments show that layers
+generally converge bottom-up by computing their similarity between points during
+training and the final state. This insight motivates freezing each layer at a
+percentage of training time, which is a simpler heuristic than the one proposed
+by \citeauthor{brock2017freezeout}. Freezing layer $i$ at time
+$\frac{i}{n_\text{layers}} \cdot n_\text{iterations}$ even leads to small improvements
+in validation accuracy.
+
+After introducing the method of Singular Vector Canonical Correlation Analysis
+(SVCCA) used by \citeauthor{raghu2017svcca}, we will apply it as a metric for
+measuring layer saturation or convergence by computing the similarity between
+each layer and itself after the previous epoch.
+
+\subsection{Singular Vector Canonical Correlation Analysis}%
+\label{sub:singular_vector_canonical_correlation_analysis}
+
+\citet{raghu2017svcca} propose a measure for comparing the similarity of
+``representations'' learned by layers in neural networks. In this context, the
+representation is defined as the set of activations of a layer's neuron over
+some dataset $D$ (usually a subset of the training data). Formally, a layer is given
+as the set of activation vectors of its units, each of which has $n := |D|$ individual
+activations.
+\begin{align}
+    L_k & :=  \left\{ (a_{k,i}(\mathbf{x}_0), \ldots, a_{k,i}(\mathbf{x}_{n-1})) \mid i \in [0,n_\text{units})\right\}
+\end{align}
+A layer's representation can hence be thought of as a subspace of
+$\mathcal{R}^n$. However, this primitive concept of a layers learned
+representation has several problems
+\begin{itemize}
+    \item It is not clear whether all directions in the subspace are equally
+        important. Indeed, as the number of parameters often exceeds the number
+        of training examples, most networks are mathematically overparameterised
+        and thus redundant by default (in the absence of regularisation).
+        Previous work (e.g. \citep{lecun1990optimal}, \citep{srinivas2015data}
+        or \citep{molchanov2016pruning} report significant computational savings
+        through removing unnecessary units). Using the representations as they
+        are would therefore incorporate many noisy, unstable and unimportant
+        parameters.
+    \item Since the dimension spanned by the activation vectors can be different
+        between layers -- as different numbers of units enable more or fewer
+        linearly independent basis vectors -- layers of different size could not
+        be straightforwardly compared e.g. by finding an transformation from one
+        space to the other, but it is desirable to compare representations
+        between layers and even networks
+\end{itemize}
+
+The first issue is addressed by reducing the dimensionality of $\Span{L_k}$ by
+principal component analysis.
+
+\begin{align*}
+    \intertext{First we obtain the data matrix for a layer}
+    L_k   & = (a_{k,i,0}, a_{k,i,1}, \ldots, a_{k,i,n-1})^T  \in \mathcal{R}^{n_\text{units} \times n} \\
+        & =
+            \begin{bmatrix}
+                a_{k,0}(\mathbf{x}_0) & \ldots & a_{k,0}(\mathbf{x}_{n-1}) \\
+                \vdots          & \ddots & \vdots \\
+                a_{k,n_\text{units}-1}(\mathbf{x}_0) & \ldots & a_{k,n_\text{units}-1}(\mathbf{x}_{n-1})
+            \end{bmatrix} \\
+    \intertext{We then get a matrix whose rows are identical -- the mean over the first dimension}
+    M_k & = (1, \ldots, 1)^T \cdot \frac{1}{n}\sum_{i=0}^{n-1} L_k(i,:)
+    \intertext{We can then compute the centered covariance matrix of the data}
+    C   & = (L_k - M_k)^T \cdot (L_k - M_k)
+    \intertext{Diagonalising this matrix yields}
+    C   & = U \Sigma V
+\end{align*}
+with $\Sigma$ containing the singular values and $U\Sigma$ being
+the transformation matrix to the lower-dimensional space (according to
+number of singular values and vectors chosen).
+
+In doing so, a new
+lower-dimensional basis of orthogonal singular vectors is found, a projection
+to which preserves the most possible variance in the data. The dimensionality
+can be selected by considering that the magnitude of the singular values is
+proportional to the amount of variance in the data that is captured by the
+associated singular direction. A number of singular directions is selected so
+as to capture $99\%$ of the variance of the data. After projecting the data onto
+the thusly determined principal components, low-variance directions (which are
+neurons) are removed.
+
+PCA is performed on both layers to compare, in our case, the same layer at
+different points in training. The dimensionality-reduced layer representation is
+then processed with canonical correlation analysis (CCA).  Given vectors of
+random variables $X=(X_0, \ldots, X_m)$, $Y=(Y_0, \ldots, Y_l)$, CCA finds
+linear combinations $a$, $b$ of both sets so that the correlation $\rho =
+corr(aX^T, bY^T )$ between the transformed random variables is maximised. When
+the first transformation is found, a second one can be computed under the
+constraint that the resulting transformed random variables be uncorrelated with
+the first pair of transformed variables, then the third and so forth. The result
+of CCA is a set of $\min\{m,l\}$ correlation coefficients which can be distilled
+into a similarity measure for learned representations, e.g. by taking the
+average.
+
+
+\subsection{Experiments}%
+\label{sub:saturation-experiments}
+
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/alexnetmini_vgg_sgd_001.pdf}
