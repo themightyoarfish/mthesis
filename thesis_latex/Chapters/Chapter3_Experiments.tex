@@ -304,7 +304,7 @@ class BiasCorrectedMomentsSubscriber(PlotSubscriber):
 \end{lstlisting}
 
 The subscriber for logging the metrics is trivial:
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}
 class SacredLoggingSubscriber(Subscriber):
   '''Subscriber which logs its subscribed values with sacred's metrics API'''
 
@@ -807,7 +807,7 @@ When an \verb+Exporter+ is configured for a given model, a
 bus in order for the update-weight-ratio ($R_{i,k}$ in the above equations) to be
 published. One can then subscribe them and process the information with this
 subscriber:
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}
 class RatioLRSubscriber(PlotSubscriber):
     def __init__(self, base_lr, smoothing=0.9, target=1e-3, max_factor=500):
         subscription = Subscription(self, ['weight_updates_weights_ratio', 'batch_started'],
@@ -1292,7 +1292,7 @@ principal component analysis.
     M_k & = (1, \ldots, 1)^T \cdot \frac{1}{n}\sum_{i=0}^{n-1} L_k(i,:)
     \intertext{We can then compute the centered covariance matrix of the data}
     C   & = (L_k - M_k)^T \cdot (L_k - M_k)
-    \intertext{Diagonalising this matrix yields}
+    \intertext{Diagonalising this matrix through SVD yields}
     C   & = U \Sigma V
 \end{align*}
 with $\Sigma$ containing the singular values and $U\Sigma$ being
@@ -1320,11 +1320,229 @@ constraint that the resulting transformed random variables be uncorrelated with
 the first pair of transformed variables, then the third and so forth. The result
 of CCA is a set of $\min\{m,l\}$ correlation coefficients which can be distilled
 into a similarity measure for learned representations, e.g. by taking the
-average.
+average. The result is a correlation between sets of neuronal activations that
+is invariant to linear transformations and is not influenced by low-variance or
+zero activations. The motivation for using this similarity as opposed to simply
+correlating activations between two time steps is that the CCA correlation
+allows a layer to change in a linear way between two steps, but we are not
+interested in how a layer's output distribution is located in space exactly, but
+what kind of representation it has learned. This additional invariant behaviour
+could be more robust to noisy and ultimately pointless changes in a layer's
+weights which we would otherwise conclude from that the layer has changed
+significantly while it effectively has not.
 
+As a side-effect of CCA, layers of different size can be related, since the
+input vectors of random variables need not be of the same length. This property
+is important for comparing different layers and architectures, but immaterial
+for our experiments.
+
+\subsection{Implementation of SVCCA}%
+\label{sub:implementation_of_svcca}
+
+\citeauthor{raghu2017svcca} released the code used for the publication released
+the code used for the publication.
+
+Todo: Report difficulties with the GPU version and brag about the fact that
+there is one at all.
 
 \subsection{Experiments}%
 \label{sub:saturation-experiments}
+
+The hypothesis to be tested in this seciton is whether the similarity of a layer
+to itself at previous point in training can be used as a heuristic for
+determining when to stop training the layer, thus saving all gradient
+computation for this layer. For this purpose a dedicated subscriber is
+implemented which periodically feeds a dataset through the network, recording
+all activations and then computing the SVCCA similarity with the current
+activations and the ones recorded from the previous time step. The subscriber is
+shown in \cref{lst:svcca_sub}.
+
+\begin{lstlisting}[label={lst:svcca_sub},
+caption={SVCCA Subscriber}]
+class SVCCASubscriber(PlotSubscriber):
+
+  def __init__(self, dataset_meta, n, forward_fn, freeze_at=10,
+               message_bus=get_default_bus(), tag='default', subsample=1,
+               ylims=None, backend='tb'):
+
+    # unfortunately, we need access to the model for this subscriber in
+    # order to initiate evaluation on the dataset
+    self._forward_fn     = forward_fn
+    self._previous_acts  = dict()
+    self._current_acts   = dict()
+
+    # get some random subset of the data
+    indices              = np.random.randint(0, dataset_meta.size,
+                                             size=n)
+    dataset              = Subset(dataset_meta.dataset, indices)
+    self._loader         = DataLoader(dataset, batch_size=n,
+                                      shuffle=False,
+                                      pin_memory=True)
+    # cache input tensors so we don't repeatedly deserialize and copy
+    self._input_cache    = []
+
+    # similarity threshold for when to freeze layer
+    self._freeze_at      = freeze_at
+    self._ignore_modules = set()
+
+    # subscribe 'batch_finished' message and also 'activations' with a
+    # certain tag chosen by this subscriber to identify messages which come up
+    # because it called forward() itself
+    subscription1 = Subscription(self, ['batch_finished'], tag=tag, subsample=subsample)
+    subscription2 = Subscription(self, ['activations'], tag='svcca_testing',
+                                 subsample=1)
+
+    # ... call super() and announce publications
+
+  # these methods can be overriden by subclasses that implement more complex
+  # forward propagations such as doing it in batches if the entire data set
+  # can't be pushed through at once
+  def _module_complete_previous(self, module):
+    '''Check if activations for module are completely buffered from the previous step.'''
+    return module in self._previous_acts
+
+  def _module_complete_current(self, module):
+    '''Check if activations for module are completely buffered from the current step.'''
+    return module in self._current_acts
+
+  def _record_activations_previous(self, module, data):
+    '''Record activations into the ``previous`` buffer'''
+    self._previous_acts[module] = data
+
+  def _record_activations_current(self, module, data):
+    '''Record activations into the ``current`` buffer'''
+    self._current_acts[module] = data
+
+  def _do_forward_pass(self):
+    # cache inputs initially
+    if not self._input_cache:
+        loader = iter(self._loader)
+    else:
+        loader = iter(self._input_cache)
+
+    # here we make use of the modified forward() function patched in the
+    # Exporter class. It accepts additional params for controlling the tag
+    # under which messages are published as a result of this call.
+    for i, (X, labels) in enumerate(loader):
+        X = X.cuda()
+        if len(self._input_cache) < i + 1:
+            self._input_cache.append((X, labels))
+        self._forward_fn(X, should_train=False, tag='svcca_testing')
+
+  def _compute_similarity(self, name):
+    # now both current and previous acts are complete and we can compute
+
+    previous_acts = self._previous_acts.pop(name)
+    current_acts = self._current_acts.pop(name)
+
+    # current acts are now previous ones
+    self._previous_acts[name] = current_acts
+
+    # convolutional filters need to be reshaped to 2-d
+    if previous_acts.ndimension() > 2:
+      c = previous_acts.shape[1]  # channel dim
+      previous_acts = previous_acts.permute([0, 2, 3, 1]).reshape(-1, c)
+
+    if current_acts.ndimension() > 2:
+      c = current_acts.shape[1]  # channel dim
+      current_acts = current_acts.permute([0, 2, 3, 1]).reshape(-1, c)
+
+    previous_acts = previous_acts.detach().cpu().numpy()
+    current_acts = current_acts.detach().cpu().numpy()
+    result_dict = svcca.cca_core.robust_cca_similarity(
+                        previous_acts.T,
+                        current_acts.T,
+                        epsilon=1e-8,
+                        threshold=0.98,
+                        verbose=False,
+                        compute_dirns=False,
+                        rescale=True)
+    return result_dict['mean'][0]
+
+  def _freeze_module(self, module):
+    print(f'Freezing {module}')
+    freeze_module(module)
+    self._ignore_modules.add(module)
+
+    # clear any orphaned data
+    if module in self._previous_acts:
+        self._previous_acts.pop(module)
+    if module in self._current_acts:
+        self._current_acts.pop(module)
+
+  def compute(self, message):
+
+    if message.tag == 'default' and message.kind == 'batch_finished':
+      # this means we are not in a state where we initiated forward
+      # passes.
+      # This assumes that the subsample initialiser parameter is set so
+      # that this does not happen after every batch (unless desired)
+      self._do_forward_pass()
+
+    elif message.tag == 'svcca_testing':
+      # we are receiving activation messages as a result of out call to
+      forward_fn()
+      module, name = message.key
+
+      if module in self._ignore_modules:
+        # maybe already frozen
+        return
+
+      if not self._module_complete_previous(module):
+        self._record_activations_previous(module, message.data)
+      elif not self._module_complete_current(module):
+        self._record_activations_current(module, message.data)
+
+      if self._module_complete_current(module) and self._module_complete_previous(module):
+        mean = self._compute_similarity(module)
+        self._backend.add_data(name, mean, message.global_step)
+
+        # ... publish to message bus
+
+        if mean > self._freeze_at:
+          self._freeze_module(module)
+\end{lstlisting}
+
+The \texttt{SVCCASubscriber} holds a dataset and listens for messages that a
+batch has ended. At this point, it will interrupt the training by passing its
+dataset through the network, and attaches a custom \texttt{tag} to the messages
+resulting from this call. This allows it to identify activation messages
+originating from the call. It would be more ergonomic to have the data returned
+directly from the call to \textt{forward()}, but since the only way PyTorch
+offers for retrieving intermediate layers' activations and gradients is
+callback-based, \texttt{ikkuna} does not provide a simpler way of doing this at
+the time of writing.
+
+The activation messages are buffered until activations for both the previous
+time step and the current one have been received, at which point the similarity
+can be computed and published to the backend and message bus.
+
+Several hyperparameters need to be decided on, and some parameters for the
+similarity routine were fixed for theses experiments.
+\begin{itemize}
+    \item The dataset on
+        which to evaluate the similarity must be decided. Since we are not interested in
+        absolute predictions but simply in neuronal responses of different layers for
+        the same data, it does not really matter whether the data is from training or
+        validation sets. Ideally, however, it should have a maximally uniform class
+        distribution so as to engage all filters that have been learned up to this
+        point. If the data distribution was highly skewed, it could mean that some
+        neurons never respond for any dataset, thus providing no information and
+        reducing the rank of the covariance matrix (since some variables -- columns of
+        the data matrix $L_k$ -- would be linearly related) even though with a better
+        dataset we might have had a larger rank and hence a different SV decomposition.
+    \item A similarity threshold at which we determine the layer doesn't change
+        anymore must be found. This value should be determined through thorough
+        experimentation (\texttt{ikkuna} can be used to evaluate different
+        thresholds on a wide range of models), but the experiments here use
+        correlation thresholds of $0.99$ and $0.995$.
+    \item The time scale at which significant layer changes are expected needs
+        to be selected. If one was to compare a layer to itself at the previous
+        training batch, one would expect very little change and thus a high
+        correlation, whereas changes between the start of an epoch and the end
+        would be much more significant. The experiments use epochs as the
+        resolution and thus compute the measure at the end of every epoch.
+\end{itemize}
 
 \begin{figure}
     \centering
