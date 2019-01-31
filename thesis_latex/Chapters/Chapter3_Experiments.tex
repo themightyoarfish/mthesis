@@ -1279,7 +1279,8 @@ representation has several problems
 The first issue is addressed by reducing the dimensionality of $\Span{L_k}$ by
 principal component analysis.
 
-\begin{align*}
+\begin{align}
+    \label{eq:cov}
     \intertext{First we obtain the data matrix for a layer}
     L_k   & = (a_{k,i,0}, a_{k,i,1}, \ldots, a_{k,i,n-1})^T  \in \mathcal{R}^{n_\text{units} \times n} \\
         & =
@@ -1294,7 +1295,7 @@ principal component analysis.
     C   & = (L_k - M_k)^T \cdot (L_k - M_k)
     \intertext{Diagonalising this matrix through SVD yields}
     C   & = U \Sigma V
-\end{align*}
+\end{align}
 with $\Sigma$ containing the singular values and $U\Sigma$ being
 the transformation matrix to the lower-dimensional space (according to
 number of singular values and vectors chosen).
@@ -1339,11 +1340,61 @@ for our experiments.
 \subsection{Implementation of SVCCA}%
 \label{sub:implementation_of_svcca}
 
-\citeauthor{raghu2017svcca} released the code used for the publication released
-the code used for the publication.
+\citeauthor{raghu2017svcca} released the code used for the
+publication\footnote{\url{https://github.com/google/svcca}} under an Apache 2.0
+open source license. The implementation uses NumPy and therefore only runs on
+the CPU. For this work, a fork was created which enables the computations to run
+transparently on NumPy, PyTorch or CuPy\footnote{CuPy is a GPU-enabled library
+implementing a subset of the NumPy API; it is developed for the deep learning
+framework Chainer.}\footnote{The library can be found at
+\url{https://github.com/themightyoarfish/svcca-gpu}}, so  that expensive memory
+transfers between CPU and GPU can be avoided. Additionally, many of the matrix
+operations can benefit from GPU acceleration. Making the computations fast
+enough to compute the similarity often enough on each layer is essential for
+using it as an on-line metric.
 
-Todo: Report difficulties with the GPU version and brag about the fact that
-there is one at all.
+An issue was discovered during benchmarking the CPU and GPU versions against one
+another: The covariance matrix computed on the activations for many layers
+turned out to be highly ill-conditioned when using PyTorch for computing it,
+seemingly due to small numerical deviations. While almost identical to the human
+observer, the small differences between the covariances often leads to a
+convergence failure of the SVD routine used in PyTorch. Since it is not unlikely
+that different units in a layer exhibit the same response to data points --
+especially in the beginning of training -- some redundancy in the activations
+can be expected and repeated datapoints lead to ill-conditioned covariance
+matrix. For this reason \citeauthor{raghu2017svcca} implement a robust version
+of the similarity computation in which noise is progressively added to the
+activations before the computations until the procedure converges successfully.
+Other potential workarounds for ill-conditioned covariances include
+\begin{itemize}
+    \item Adding a small constant to the diagnoal of the covariance matrix (this
+        is known as \emph{nugget regularisation})
+    \item Adjusting the threshold parameter generally used in SVD algorithm to
+        cut off singular values close to zero
+\end{itemize}
+The efficacy of these parameters would need extensive evaluation.
+
+This solution notwithstanding, it turned out
+that the \texttt{torch.mean()} function behaves slightly differently from the
+the NumPy equivalent, possibly losing precision somewhere, which changes the
+covariances (see \cref{eq:cov}).  The entries of the covariance matrices are
+often smaller than $0.1$, while maximal differences between NumPy and PyTorch
+computations reach values of $0.05$, which is very large in relation to the
+values.
+Floating point arithmetic, at least in the IEEE 754 specification generally used
+in computing, is neither completely commutative nor associative, so the order in
+which operations are performed can impact the result, so this behaviour is
+expected\footnote{\url{https://github.com/pytorch/pytorch/issues/16569}}. This
+does not usually lead to problems, but in this use case appears to be highly
+dangerous. It is unclear in which circumstances the problem arises exactly and a
+more thorough investigation would be necessary.
+
+For this reason, the experiments
+performed here use NumPy for computing the SVCCA metric. This incurs high data
+transfer overhead, but is more stable and sufficient to answer the question of whether the
+metric can be useful at all. An investigation of the limitations of the GPU
+impelementation is left for future work.
+
 
 \subsection{Experiments}%
 \label{sub:saturation-experiments}
@@ -1508,7 +1559,7 @@ batch has ended. At this point, it will interrupt the training by passing its
 dataset through the network, and attaches a custom \texttt{tag} to the messages
 resulting from this call. This allows it to identify activation messages
 originating from the call. It would be more ergonomic to have the data returned
-directly from the call to \textt{forward()}, but since the only way PyTorch
+directly from the call to \texttt{forward()}, but since the only way PyTorch
 offers for retrieving intermediate layers' activations and gradients is
 callback-based, \texttt{ikkuna} does not provide a simpler way of doing this at
 the time of writing.
