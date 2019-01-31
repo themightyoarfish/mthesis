@@ -106,3 +106,39 @@ resize layers live. It is not obvious how to do this properly, since only the
 insignificant components of a layer should be removed. We would need to identify
 a projection of weight matrices on a lower-dimensional subspace that does not
 cancel all progress made throughout training.
+
+
+\section{Improvements To The Software}%
+\label{sec:improvements_to_the_software}
+
+The \texttt{ikkuna} library simplifies metric tracking for neural networks, but
+more work is necessary to make it production-ready, including bug
+fixes\footnote{An updated list of open issues can  be found at
+\url{https://github.com/Peltarion/ai_ikkuna/issues}}.
+
+The following list lists useful features which should be implemented in future
+versions.
+
+\begin{itemize}
+    \item Subscribers should be asynchronous and interleave their -- possibly
+        expensive -- computations with the actual training. This should reduce
+        the cost of computing metrics to almost nothing, since the main process
+        is generally waiting while the GPU is working, besides loading and
+        decoding training data -- which again involves waiting on the hard disk.
+    \item The API for now is purely callback-based -- a result of the PyTorch
+        API. Howerver, for some usecases -- notably computing validation
+        accuracy and the SVCCA measure, which require the Subscriber to initiate
+        forward passes -- it is desirable to obtain activations or gradients as
+        a return value of the forward pass, and not having to wait for the
+        messages in a callback. An additional abstraction between the model and
+        the subscriber could buffer the messages and return them in response to
+        method call.
+    \item A related problem is that some subscribers need direct access to the
+        model to push data through it. This is undesirable as it couples
+        Subscriber and Publisher. A service accepting data and returning
+        intermediate activations and gradients would we a good complement to the
+        callback-based API.
+    \item The relationship between the \texttt{Subscriber} and
+        \texttt{Subscription} classes is convoluted at present and can probably
+        be simplified.
+\end{itemize}
