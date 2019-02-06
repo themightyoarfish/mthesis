@@ -1205,7 +1205,7 @@ layers according to some criterion, thus saving computation time during the
 backward pass. This only makes sense, however, if we do not lose validation
 accuracy this way.
 
-The term ``early stopping`` generally refers to halting training completely
+The term ``early stopping'' generally refers to halting training completely
 based on some criterion, often derived from the current training and validation
 accuracy of the model. It is used to avoid overfitting the model to the dataset
 by iterating over the dataset too often, until the model essentially memorises
@@ -1241,7 +1241,9 @@ in validation accuracy.
 After introducing the method of Singular Vector Canonical Correlation Analysis
 (SVCCA) used by \citeauthor{raghu2017svcca}, we will apply it as a metric for
 measuring layer saturation or convergence by computing the similarity between
-each layer and itself after the previous epoch.
+each layer and itself after the previous epoch. We will compare the usefulness
+of this metric in informing a freezing schedule with the aforementioned fixed
+schedule.
 
 \subsection{Singular Vector Canonical Correlation Analysis}%
 \label{sub:singular_vector_canonical_correlation_analysis}
@@ -1337,6 +1339,8 @@ input vectors of random variables need not be of the same length. This property
 is important for comparing different layers and architectures, but immaterial
 for our experiments.
 
+Todo: Elaborate on difference between linear and conv layers
+
 \subsection{Implementation of SVCCA}%
 \label{sub:implementation_of_svcca}
 
@@ -1369,7 +1373,7 @@ Other potential workarounds for ill-conditioned covariances include
 \begin{itemize}
     \item Adding a small constant to the diagnoal of the covariance matrix (this
         is known as \emph{nugget regularisation})
-    \item Adjusting the threshold parameter generally used in SVD algorithm to
+    \item Adjusting the threshold parameter generally used in SVD algorithms to
         cut off singular values close to zero
 \end{itemize}
 The efficacy of these parameters would need extensive evaluation.
@@ -1594,22 +1598,199 @@ similarity routine were fixed for theses experiments.
         would be much more significant. The experiments use epochs as the
         resolution and thus compute the measure at the end of every epoch.
 \end{itemize}
+\begin{table}
+    \centering
+    \caption{Hyperparameters for the saturation experiment}
+    \label{tbl:params-saturation}
+    \begin{tabular}{ll}
+        Parameter            & Value \\\hline\hline
+        Optimiser            & Vanilla SGD \\\hline
+        Epochs               & $30$ \\\hline
+        Dataset              & CIFAR10 \\\hline
+        Batch size           & $512$ \\\hline
+        Datapoints for SVCCA & $500$ \\\hline
+        Nugget constant      & $10^{-8}$ \\\hline
+        Learning rates       & $0.01, 0.1, 0.5$
+    \end{tabular}
+\end{table}
+
+The hyperparameters used in these experiment are listed in
+\cref{tbl:params-saturation}.  The experiment was run on the small convolutional
+architecture (\cref{fig:alexnetmini}) as well as the larger VGG model
+(\cref{fig:vgg16}). The self-similarity for each layer was computed at the
+beginning of each epoch. We select high learning rates has have been found
+appropriate for standard gradient descent. The different learning rates are
+split among \cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.01$),
+\cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.1$) and
+\cref{fig:saturation_alexnet_vgg_sgd_05_similarity} ($\eta = 0.5$). All graphs are averages
+of several runs, noted in parantheses in the legend. For thresholds on the
+self-similarity score we use $0.99$, $0.995$ and also report control runs
+without layer freezing (denoted by ``never'' in the graphs) and the heuristic
+from \citep{raghu2017svcca} (see \cref{sub:saturation-background}).
+
+\subsubsection{Layer Convergence and Validation Accuracy}
+
+Focusing on the accuracy graphs (upper row) shows that for both thresholds and
+models, accuracy is not negatively impacted, testifying that layer freezing can
+always be appropriate. Except for the largest learning rate on the smaller model
+(\cref{fig:saturation_alexnet_vgg_sgd_05_similarity}), the self-similarity-based
+schedule for freezin is also not worse than the fixed one. For the smaller
+model, freezing layers even resulted in increases accuracy. One explanation for
+this could be that the model is more prone to overfit than the VGG network,
+despite its smaller size. In that case, freezing layers before they start to
+memorise the data could prevent this from happening.  For the higher of the two
+thresholds, improvents could only be observed for the smaller two learning
+rates. In contrast, at a learning rate of $0.5$, waiting until a layer reaches
+$0.995$ saturation seems to allow the model to overfit too much, while the lower
+learning rates are not high enough to show this problem.
+
+On the other hand, the VGG model does not benefit from layer freezes
+performance-wise. It is possible the architecture is less prone to overfit, thus
+deriving no benefit from regularising it through freezes, besides reducing
+computational cost.
+
+We can draw the preliminary conclusion that progressively freezing layers is not
+detrimental to performance, but saves computation.
+
+It is also interesting to look at how the self-similarity for a layer evolves
+throughout training (bottom row of plots). The similarity graphs for VGG show
+strikingly, that according to this metric, layers converge bottom-up, without
+fail, which is in line with \citet{raghu2017svcca}'s findings. Freezing
+according to this metric therefore always results in successive layers getting
+frozen, not disconnected ones. It is remarkable that in all cases, the first
+layer of convolutions is converged already after the first five epochs, often
+needing no more than one. All other layers need substantially longer. This makes
+sense as the lower layers often learn spatial filters which act as edge
+detectors. These filters are useful for any input, so the specific class
+distribution almost does not matter. Because of this, it is not surprising that
+$50.000$ training (one epoch) examples are enough to learn these filters.
 
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/alexnetmini_vgg_sgd_001.pdf}
-    \caption{Todo}
+    \caption{Layer convergence experiment with learning rate $0.01$}
     \label{fig:saturation_alexnet_vgg_sgd_001}
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/acc_sim_alexnetmini_vgg_sgd_001.pdf}
+        \caption{Accuracy and self-similarity for learning rate $0.01$}
+        \label{fig:saturation_alexnet_vgg_sgd_001_similarity}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/convergence_alexnetmini_vgg_sgd_001.pdf}
+        \caption{Freeze points for learning rate $0.01$}
+        \label{fig:saturation_alexnet_vgg_sgd_001_convergence}
+    \end{subfigure}
 \end{figure}
+
+
 \begin{figure}
     \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/alexnetmini_vgg_sgd_05.pdf}
-    \caption{Todo}
-    \label{fig:saturation_alexnet_vgg_sgd_05}
-\end{figure}
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/alexnetmini_vgg_sgd_01.pdf}
-    \caption{Todo}
+    \caption{Layer convergence experiment with learning rate $0.1$}
     \label{fig:saturation_alexnet_vgg_sgd_01}
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/acc_sim_alexnetmini_vgg_sgd_01.pdf}
+        \caption{Accuracy and self-similarity for learning rate $0.1$}
+        \label{fig:saturation_alexnet_vgg_sgd_001_similarity}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/convergence_alexnetmini_vgg_sgd_01.pdf}
+        \caption{Freeze points for learning rate $0.1$}
+        \label{fig:saturation_alexnet_vgg_sgd_01_convergence}
+    \end{subfigure}
 \end{figure}
+
+\begin{figure}
+    \centering
+    \caption{Layer convergence experiment with learning rate $0.5$}
+    \label{fig:saturation_alexnet_vgg_sgd_05}
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/acc_sim_alexnetmini_vgg_sgd_05.pdf}
+        \caption{Accuracy and self-similarity for learning rate $0.5$}
+        \label{fig:saturation_alexnet_vgg_sgd_05_similarity}
+    \end{subfigure}
+
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/convergence_alexnetmini_vgg_sgd_05.pdf}
+        \caption{Freeze points for learning rate $0.5$}
+        \label{fig:saturation_alexnet_vgg_sgd_05_convergence}
+    \end{subfigure}
+\end{figure}
+
+As a last point, the high learning rate used in
+\cref{fig:saturation_alexnet_vgg_sgd_05_similarity} leads to interesting reactions in the
+self-similarity metric. While AlexNetMini's performance is not much worse than
+for the optimal learning rate of $0.1$, training is much more unstable, with the
+accuracy fluctuating. Indeed, the saturation metric reflects this constant
+change in layer weights, and most of the layers do not converge at all. This
+observation opens the door for evaluating the SVCCA score as a stability metric
+and for guiding learning rate scheduling (see
+\cref{sec:detecting_learning_rate_problems}). Both AlexNetMini and VGG exhibit
+much slower convergence than would be possible, and we can read the instability
+from the SVCCA score's trajectory.
+
+\subsubsection{Computational Savings with Self-Similarity vs. Fixed Schedule}
+
+Turning to the question of whether this heuristic performs better than the fixed
+schedule from \citep{raghu2017svcca}, the point at which each layer was frozen
+is graphed in
+\cref{fig:saturation_alexnet_vgg_sgd_001_convergence,fig:saturation_alexnet_vgg_sgd_01_convergence,fig:saturation_alexnet_vgg_sgd_05_convergence}.
+Layers are differentiated by colour and marker style, and all runs are
+displayed. A random offset is added in the vertical direction to avoid the runs
+overlapping.
+
+In most cases, using self-similarity -- without negatively impacting accuracy --
+tends to freeze layers earlier, thus saving more computation than freezing
+layers at fixed percentages of training time.
+\cref{fig:saturation_alexnet_vgg_sgd_001_convergence} (both models) and
+\cref{fig:saturation_alexnet_vgg_sgd_01_convergence} (VGG model) both show the
+similarity-based freezing to freeze layers much earlier on average. As the high
+learning rate of $0.5$ leads to unstable training, with likely very high
+variance in the weight updates, it is unsurprising that layers don't converge
+and are thus trained until the end. For non-pathological cases, the proposes
+metric appears to save more update steps. However, additional overhead is
+incurred in actually computing the metrics. An exhaustive evaluation of the
+cost-benefit tradeoff is left for future work, but the results are promising,
+especially in light of a possible GPU implementation of SVCCA, most of which
+could be done asynchronously.
+
+For the smaller of the two models (left plots), we see again that the two
+convolutional layers areconverged right after the first epoch or the second,
+respectively. The precise threshold value does not seem to matter so much.
+Saturating the first linear layer takes much longer and the different thresholds
+lead to different times until convergence. A higher learning rate of $0.1$ (see
+\cref{fig:saturation_alexnet_vgg_sgd_01_convergence}) leads to more spaced-out
+convergence points for the convolutional layers, while the linear layers are not
+considered converged during training at all. What can be deduced from this fact
+is that the $0.01$ is a too small learning rate for the problem and architecture
+in question. The reason why the linear layers converge early for a learning rate
+of $0.01$ could be that the learning rate is simply too small to translate the
+gradients on this problem into substantial change in the layer's weights,
+leading to a smaller validation accuracy. By contrast, the larger learning rate
+will move the weights sufficiently to allow the linear layers to learn more
+performant representations, and thus need longer to converge. Similar
+observations can be made for a learning rate of $0.5$.
+
+In case of the VGG model, we observe similarly fast convergence of the first
+convolutional layers, reinforcing the hypothesis that the early feature
+detectors are mostly architecture- and problem-agnostic. We can also see that
+convergence for most layers takes longer for higher thresholds (unsurprisingly),
+except for the medium learning rate
+(\cref{fig:saturation_alexnet_vgg_sgd_01_convergence}) for which all layers very
+consistently converge at the same time as well. Since this is the condition with
+the best validation accuracy, this phenomenon may merit further investigation.
+
+For the high learning rate of $0.5$, most VGG layers do not converge at all
+according to the self-similarity metric. Nevertheless, the accuracy does reach
+optimal levels $\sim 0.8$, but takes much longer than with a smaller learning
+rate. This tells us that whether or not all layers converge is not necessarily
+indicative of whether the network can learn the task at all, but more likely how
+quickly and efficiently it can learn it. An investigation into how the solutions
+found by networks with converged layers differ from unconverged ones is an
+interesting application for the SVCCA metric as well. As a matter of fact,
+\citet{NIPS2018_7815} use it to compare minimisers found by memorising and
+generalising networks.
+
+
+\subsection{Conclusion}%
+\label{sub:svcca-conclusion}
