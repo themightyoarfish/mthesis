@@ -634,8 +634,6 @@ more experiments than \citet{kingma2014adam} provided.
 \section{Detecting Learning Rate Problems}%
 \label{sec:detecting_learning_rate_problems}
 
-\subsection{State of the Art and Related Work}%
-
 \subsection{Ratio-Adaptive Learning Rate Scheduling}%
 \label{sub:ratio_adaptive_learning_rate_scheduling}
 
@@ -1070,7 +1068,7 @@ gradients, and possibly overcorrects the learning rate.
 \subsubsection{Other Architectures}
 
 Several analyses were conducted on the data, but not displayed here due to
-inconclusive results.
+inconclusive results. \textcolor{red}{Put plots into appendix to beef up thesis!}
 The experiments were run on the AlexNetMini architecture as well, without
 results, as the network does not converge within $75$ epochs.
 The same experiment on the ResNet18 architecture exhibited the same qualitative
@@ -1088,7 +1086,7 @@ can only decrease significantly if the weights change accordingly (unless the
 loss surface is extremely rough), we find no particular insights as to what
 ratio is appropriate for any given point in training.
 
-\subsubsection{Ratio-Adaptive Learning Rate Scheduling}
+\subsubsection{Fixing The Learning Rate for Karpathy's Constant}
 
 We now want to check how the UW ratio relates to the loss when we attempt to
 artificially fix the ratio value to a target of $0.001$. Since the updates to the
@@ -1265,11 +1263,11 @@ representation has several problems
         important. Indeed, as the number of parameters often exceeds the number
         of training examples, most networks are mathematically overparameterised
         and thus redundant by default (in the absence of regularisation).
-        Previous work (e.g. \citep{lecun1990optimal}, \citep{srinivas2015data}
-        or \citep{molchanov2016pruning} report significant computational savings
-        through removing unnecessary units). Using the representations as they
-        are would therefore incorporate many noisy, unstable and unimportant
-        parameters.
+        Previous work (e.g.
+        \citet{lecun1990optimal,srinivas2015data,molchanov2016pruning} report
+        significant computational savings through removing unnecessary units).
+        Using the representations as they are would therefore incorporate many
+        noisy, unstable and unimportant parameters.
     \item Since the dimension spanned by the activation vectors can be different
         between layers---as different numbers of units enable more or fewer
         linearly independent basis vectors---layers of different size could not
