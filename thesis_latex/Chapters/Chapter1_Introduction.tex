@@ -138,8 +138,50 @@ to the model parameters. The backpropagation algorithm provides an efficient way
 of computing all the partial derivatives of the loss with respect to each
 parameter (network weight). Parameters are usually updated with some form of the
 gradient descent optimisation algorithm. An introduction to the mathematics of
-deep neural networks is deferred to
-\cref{sec:review_stochastic_gradient_descent}.
+deep neural networks is given in \cref{sec:review_stochastic_gradient_descent}.
+
+\section{Review: Stochastic Gradient Descent}%
+\label{sec:review_stochastic_gradient_descent}
+
+In this section, we briefly survey the stochastic gradient descent algorithm.
+This algorithm is used (in some variant) for virtually all practical deep
+learning models. The name derives from the fact that the model parameters are
+updated in the direction of the negative gradient, which is the high-dimensional
+partial derivative of the scalar loss function with respect to the model parameters. It
+is stochastic as it only uses a subset of the training data at every time step
+and thus only approximates the true gradient which would have to be computed
+over the entire dataset to be learned.
+
+In standard stochastic gradient descent, a loss $J$ of some the
+model parameters $\boldsymbol\theta$ (here, the layer weights) is computed over the training set of $m$
+examples by forming the expectation over the sample loss $L$:
+
+\begin{align}
+    J(\boldsymbol\theta) &= \mathbb{E}_{\mathbf{x},y\sim\hat{p}_{\text{data}}} L(\mathbf{x}, y, \boldsymbol\theta) \\
+                         &= \frac{1}{m}\sum_{i=1}^{m}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
+\end{align}
+The cumulative loss can then be derived for $\boldsymbol\theta$
+
+\begin{align}
+    \nabla_{\boldsymbol\theta}J &= \frac{1}{m}\sum_{i=1}^{m}\nabla_{\boldsymbol\theta}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
+\end{align}
+per the sum rule of differentiation. The simplest form of parameter update rule
+is then
+
+\begin{align}
+    \boldsymbol\theta &\leftarrow \boldsymbol\theta - \eta \nabla_{\boldsymbol\theta}J
+\end{align}
+with the learning rate $\eta$. There is no hard and fast rule on what this
+parameter should be, and it is subject of large swathes of literature. Popular
+modifications to the vanilla update rule are the use of momentum
+\citep{jacobs1988increased}, per-layer learning rates (ibd.), reducing the rate
+throughout training, or adapting the
+learning rate based on mean and variance of gradients across past time steps
+\citep{kingma2014adam}. Nevertheless, most of the time, training begins with an
+arbitrarily chosen small learning rate around $0.001$ which is then adapted
+either by the aforementioned mechanisms or by search over the parameter space on
+a subset of the training data when computationally feasible.
+
 
 \hypertarget{sec:thesis-goals}{%
 \section{Goals of this Thesis}\label{sec:thesis-goals}}
