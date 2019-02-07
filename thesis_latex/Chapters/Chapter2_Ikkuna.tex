@@ -77,7 +77,7 @@ gradients, the graph can be traversed backwards from the output node by applying
 the reverse-mode autodifferentiation algorithm (a generalisation of the plain
 backpropagation used in the multilayer perceptron).  Define-and-run frameworks
 like TensorFlow create the graph explicitly; the user uses the API to do exactly
-this. The graph -- once compiled -- is fixed for the entire training process.
+this. The graph---once compiled---is fixed for the entire training process.
 PyTorch on the other hand implicitly records all operations as they execute and
 also overloads arithmetic operators for this purpose. The graph is recreated for each
 propagation through the network and the user never directly interacts with it.
@@ -200,7 +200,7 @@ through the network are running. This is not currently implemented but can be
 added later, in case more computationally demanding metrics are to be explored.
 
 In the context of neural network training, there is only one source of
-information -- the model -- and hence only one publisher. Nevertheless, a message server is
+information---the model---and hence only one publisher. Nevertheless, a message server is
 introduced to segregate responsibilities. The singular publisher extracts data from the
 training model, passes it on to the server which also accepts subscriber
 registrations and relays messages appropriately.
@@ -295,19 +295,19 @@ modules in the model. For instance, it could be desirable to only observe layers
 which have weights and biases associated with them, not e.g.~normalisation or
 reshaping layers. The \texttt{Exporter} then traverses the model (which is
 really just a tree structure of modules) and adds to each a callback invoked
-when input enters the layer -- in order to retrieve activations -- and when
+when input enters the layer---in order to retrieve activations---and when
 gradients are computed for the layer outputs. PyTorch provides the
 \lstinline+add_forward_hook()+ and \lstinline+add_backward_hook()+ functions on
 modules (layers) and \lstinline+add_hook()+ function on Tensors to register
-callbacks. All added modules are also given a name -- either set by the user
+callbacks. All added modules are also given a name---either set by the user
 during creation of the model or generated automatically. The name is necessary
 for display purposes.
 
-The callbacks also use cached weights -- if present -- in order to publish updates to the weights.
+The callbacks also use cached weights---if present---in order to publish updates to the weights.
 
 Furthermore, the \lstinline+Exporter+ employs monkey patches to the model; it
-replaces a few of the model's methods with closure wrappers -- functions defined
-locally which have access to the \lstinline+Exporter+ instance -- so it can
+replaces a few of the model's methods with closure wrappers---functions defined
+locally which have access to the \lstinline+Exporter+ instance---so it can
 
 \begin{itemize}
     \item
@@ -316,7 +316,7 @@ locally which have access to the \lstinline+Exporter+ instance -- so it can
         the phases\footnote{There are two built-in layers this applies to. One
             is the batch normalisation layer. It normalises the output of the
             previous layer with the mean and variance over the entire batch of
-            data -- optionally with running means and variances over the
+            data---optionally with running means and variances over the
             previous training steps. The variance is not defined for
             single data point enters the layer, as could be the case during
             inference/testing time. The layer therefore stores running estimates
@@ -334,8 +334,8 @@ locally which have access to the \lstinline+Exporter+ instance -- so it can
         This can be deduced from the fact that \lstinline+forward()+ is called
         on the model.
     \item
-        add a parameter to the model's \lstinline{forward()} method -- called by
-        the runtime when data is propagated through the model -- which can be
+        add a parameter to the model's \lstinline{forward()} method---called by
+        the runtime when data is propagated through the model---which can be
         used be subscribers to temporarily turn off training mode and have it
         revert automatically. This is useful for subscribers which need to
         evaluate the model and are thus given limited access through the
@@ -841,7 +841,7 @@ metric logging on arbitrary models created by the platform's users without
 having to resort to code generation during translation of the abstract model
 definition created in the browser to the model implementation in the backend.
 
-Secondly, the library -- or the ideas prototyped therein -- will be helpful in
+Secondly, the library---or the ideas prototyped therein---will be helpful in
 providing feedback to the user about the state of their experiment. Since the
 platform is at least partially aimed at non-experts, even well-known and simple
 metrics can be of great help in avoiding common pitfalls in model training. This

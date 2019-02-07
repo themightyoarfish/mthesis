@@ -366,7 +366,7 @@ evidence, notably
 
 \begin{itemize}
     \item \label{itm:adam-claim-1} Convolutional layers should be assigned a smaller learning rate than
-        linear ones and that -- presumably -- Adam does this automatically.
+        linear ones and that---presumably---Adam does this automatically.
     \item
         That the update for the experiment with the convolutional network is
         dominated by the mean estimate and $\epsilon$ while the gradient
@@ -522,8 +522,8 @@ of increasing gradient variances in some fashion througout training. Possibly,
 an increase in variance is correlated with layers becoming more differentiated
 and sensitive to more patterns and is thus indicative of learning progress.
 It would be interesting to perform these same experiments with batch
-normalisation applied between layers to see whether their influence -- which
-should counteract any variance increase -- invalidates this hypothesis.
+normalisation applied between layers to see whether their influence---which
+should counteract any variance increase---invalidates this hypothesis.
 
 \begin{figure}
     \begin{subfigure}{\textwidth}
@@ -595,8 +595,8 @@ and lower ones to convolutions. If this heuristic were to be used for manually
 tuning SGD, it would indeed be automatically handled by Adam. Ignoring the final
 classification layer (\texttt{/classifier/linear1}) in the Convnet, this seems
 to come from the fact that dense layers exhibit a gradient variance several
-orders of magnitude smaller, while the gradient mean -- while still being
-smaller -- differs by less than one order of magnitude.
+orders of magnitude smaller, while the gradient mean---while still being
+smaller---differs by less than one order of magnitude.
 
 We omit here the results for the fully connected model trained with SGD (because
 it learns only for the largest learning rate), as well as the larger VGG16
@@ -609,7 +609,7 @@ large differences. See \cref{ch:appendixC} for these experiments.
 With the experiments performed here, we have evaluated the qualitative behaviour
 of the Adam optimisation algorithm compared to vanilla stochastic gradient
 descent on three architectures, with several learning rates. We find that Adam
-is -- in spite of its promise -- very sensitive to the learning rate and the
+is---in spite of its promise---very sensitive to the learning rate and the
 correct order of magnitude must be determined beforehand. We have validated that
 it automatically assigns smaller learning rates to convolutional layers than to
 dense once, a finding in line with a popular heuristic employed manually for
@@ -929,7 +929,7 @@ highest value, but the decrease in loss for these steps increases throughout the
 first few batches (i.e. learning accelerates) before tapering off. This is
 barely visible in the line plots, but shows as a prominent feature in the
 scatter plot. It should be noted that this phenomenon happens on a very small
-timescale -- the number of data points in the arc is orders of magnitude smaller
+timescale---the number of data points in the arc is orders of magnitude smaller
 than in the rest of the plot, therefore it is no more than a curiosity. As a
 preliminary conclusion, we can affirm that there is no linear correlation
 between the ratio and the decrease in loss.
@@ -997,7 +997,7 @@ high. It can also be adjusted upward up to the upper bound if the gradient mean
 is high, giving Adam momentum-like behaviour. The primary proposition of
 \citet{kingma2014adam} is that manually tuning the learning rate per layer or
 even per parameter is no longer necessary, but we see here that cases can be
-found where precisely this behaviour of Adam would be needed -- we have set a
+found where precisely this behaviour of Adam would be needed---we have set a
 too-high learning rate, but Adam fails to compensate for this negligence. This
 casts doubt on the universality of the Adam optimiser.\footnote{The hypothesis
 that Adam starts to show its merit in the absence of batch normalisation could
@@ -1179,7 +1179,7 @@ weights needs to decrease, and indeed this has been demonstrated clearly. It is
 not clear at this point whether the UW ratio provides additional information
 over other metrics such as the loss curve itself or the norm of the gradients,
 but the experiments in influencing the ratio have proven that there is no
-obvious dependency between them -- problems can still be learned with a smooth
+obvious dependency between them---problems can still be learned with a smooth
 loss decrease even when influencing the UW ratio via learning rate scheduling.
 
 However, more work would be necessary to check whether a moving target could
@@ -1271,8 +1271,8 @@ representation has several problems
         are would therefore incorporate many noisy, unstable and unimportant
         parameters.
     \item Since the dimension spanned by the activation vectors can be different
-        between layers -- as different numbers of units enable more or fewer
-        linearly independent basis vectors -- layers of different size could not
+        between layers---as different numbers of units enable more or fewer
+        linearly independent basis vectors---layers of different size could not
         be straightforwardly compared e.g. by finding an transformation from one
         space to the other, but it is desirable to compare representations
         between layers and even networks
@@ -1291,7 +1291,7 @@ principal component analysis.
                 \vdots          & \ddots & \vdots \\
                 a_{k,n_\text{units}-1}(\mathbf{x}_0) & \ldots & a_{k,n_\text{units}-1}(\mathbf{x}_{n-1})
             \end{bmatrix} \\
-    \intertext{We then get a matrix whose rows are identical -- the mean over the first dimension}
+    \intertext{We then get a matrix whose rows are identical---the mean over the first dimension}
     M_k & = (1, \ldots, 1)^T \cdot \frac{1}{n}\sum_{i=0}^{n-1} L_k(i,:)
     \intertext{We can then compute the centered covariance matrix of the data}
     C   & = (L_k - M_k)^T \cdot (L_k - M_k)
@@ -1364,7 +1364,7 @@ seemingly due to small numerical deviations. While almost identical to the human
 observer, the small differences between the covariances often leads to a
 convergence failure of the SVD routine used in PyTorch. Since it is not unlikely
 that different units in a layer exhibit the same response to data points --
-especially in the beginning of training -- some redundancy in the activations
+especially in the beginning of training---some redundancy in the activations
 can be expected and repeated datapoints lead to ill-conditioned covariance
 matrix. For this reason \citeauthor{raghu2017svcca} implement a robust version
 of the similarity computation in which noise is progressively added to the
@@ -1583,8 +1583,8 @@ similarity routine were fixed for theses experiments.
         distribution so as to engage all filters that have been learned up to this
         point. If the data distribution was highly skewed, it could mean that some
         neurons never respond for any dataset, thus providing no information and
-        reducing the rank of the covariance matrix (since some variables -- columns of
-        the data matrix $L_k$ -- would be linearly related) even though with a better
+        reducing the rank of the covariance matrix (since some variables---columns of
+        the data matrix $L_k$---would be linearly related) even though with a better
         dataset we might have had a larger rank and hence a different SV decomposition.
     \item A similarity threshold at which we determine the layer doesn't change
         anymore must be found. This value should be determined through thorough
@@ -1739,7 +1739,7 @@ Layers are differentiated by colour and marker style, and all runs are
 displayed. A random offset is added in the vertical direction to avoid the runs
 overlapping.
 
-In most cases, using self-similarity -- without negatively impacting accuracy --
+In most cases, using self-similarity---without negatively impacting accuracy --
 tends to freeze layers earlier, thus saving more computation than freezing
 layers at fixed percentages of training time.
 \cref{fig:saturation_alexnet_vgg_sgd_001_convergence} (both models) and

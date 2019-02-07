@@ -26,8 +26,8 @@ But the Hessian is what e.g. the Newton algorithm requires in higher dimensions.
 
 There exist some second-order algorithms for non-convex optimisation.  One such
 algorithm is Limited Memory BFGS \citep{liu1989limited}, an adaptation of the
-BFGS algorithm -- which estimates the inverse Hessian with respect to all model
-parameters -- that remembers only some history of update steps and gradients.
+BFGS algorithm---which estimates the inverse Hessian with respect to all model
+parameters---that remembers only some history of update steps and gradients.
 Another method is Conjugate Gradient Descent (originally described by
 \citet{fletcher1964function}), which does not require the Hessian explicitly,
 but only needs to compute Hessian-vector products, which is much easier.
@@ -71,8 +71,8 @@ carry information about the sharpness of a local minimum and could be used for
 diagnosing stability of the current mimiser, which is relevant both for
 generalisation ability and resilience against adversarial attacks (inputs
 crafted to fool the network). There has been some recent work arguing for
-smaller batch sizes -- one of the parameters whose choice we want to simplify
-for the user -- as they tend to generalise better (see e.g.
+smaller batch sizes---one of the parameters whose choice we want to simplify
+for the user---as they tend to generalise better (see e.g.
 \citep{keskar2016large}). The claim is disputed, but \citet{yao2018hessian} find
 that larger batch sizes during training strongly correlate with larger dominant
 eigenvalues of the Hessian. It is unclear if an absolute value can be determined
@@ -120,15 +120,15 @@ The following list lists useful features which should be implemented in future
 versions.
 
 \begin{itemize}
-    \item Subscribers should be asynchronous and interleave their -- possibly
-        expensive -- computations with the actual training. This should reduce
+    \item Subscribers should be asynchronous and interleave their---possibly
+        expensive---computations with the actual training. This should reduce
         the cost of computing metrics to almost nothing, since the main process
         is generally waiting while the GPU is working, besides loading and
-        decoding training data -- which again involves waiting on the hard disk.
-    \item The API for now is purely callback-based -- a result of the PyTorch
-        API. Howerver, for some usecases -- notably computing validation
+        decoding training data---which again involves waiting on the hard disk.
+    \item The API for now is purely callback-based---a result of the PyTorch
+        API. Howerver, for some usecases---notably computing validation
         accuracy and the SVCCA measure, which require the Subscriber to initiate
-        forward passes -- it is desirable to obtain activations or gradients as
+        forward passes---it is desirable to obtain activations or gradients as
         a return value of the forward pass, and not having to wait for the
         messages in a callback. An additional abstraction between the model and
         the subscriber could buffer the messages and return them in response to
