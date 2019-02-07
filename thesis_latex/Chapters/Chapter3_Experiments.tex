@@ -604,7 +604,7 @@ convolutional architecture trained with both optimisers, since the latter
 appears to be invariant to any change and may simply be too powerful to exhibit
 large differences. See \cref{ch:appendixC} for these experiments.
 
-\subsection{Conclusion}
+\subsection{Summary}
 
 With the experiments performed here, we have evaluated the qualitative behaviour
 of the Adam optimisation algorithm compared to vanilla stochastic gradient
@@ -1080,7 +1080,7 @@ of $5,000$ training steps separately reveals nothing beyond a decrease in
 absolute value of ratio and loss, which is expected. Any correlations between
 the two quantities do not change after the initial few steps.
 
-\subsubsection{Conclusion}
+\subsubsection{Summary}
 
 The results from all these experiments do not demonstrate that a ratio value
 of $0.001$ is any more significant than others. While it is intuitive that the loss
@@ -1169,7 +1169,7 @@ the phenomenon documented here.
     \end{subfigure}
 \end{figure}
 
-\subsubsection{Conclusion}
+\subsubsection{Summary}
 
 The two experiments with a dynamic learning rate schedule based on the average
 ratio of updates and parameters do not yield any definitive insights into
@@ -1792,5 +1792,20 @@ interesting application for the SVCCA metric as well. As a matter of fact,
 generalising networks.
 
 
-\subsection{Conclusion}%
+\subsection{Summary}%
 \label{sub:svcca-conclusion}
+
+This section has demonstrated an alternative use case for the SVCCA similarity
+metric originally proposed for offline-introspection of neural networks. It was
+evaluated as a heuristic for detecting layer convergence which resulted in
+promising observations when compared to freezing layers at a fixed schedule. The
+SVCCA self-similarity does not usually deteriorate performance and freezes
+layers earlier than a fixed schedule in many cases.
+More comprehensive studies should be made to validate this observation on more
+architectures and datasets. Furthermore, the role of the additional parameters
+introduced for computing the SVCCA metric remains to be explored---notably, how
+many datapoints should be used. As computing the metric in a certain interval
+incurs some computation overhead which we have not yet accounted for, more work
+is necessary to definitivly answer the question whether this heuristic
+outperforms the fixed schedule in absolute terms, not only in number of gradient
+computations saved.
