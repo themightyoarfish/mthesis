@@ -1,21 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Custom adjustments %%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{ifthen}
-\newboolean{printout} % this disables colorlinks and makes some tikzpictures grayscale (except the one oddball ignoring the setting)
-\setboolean{printout}{false}
-\newcommand*{\makegrayinprint}{
-   \ifthenelse{\boolean{printout}}
-   {\selectcolormodel{gray}}{\relax}
-}
-
-\ifthenelse{\boolean{printout}}
-{
-   \PassOptionsToPackage{colorlinks=false}{hyperref}
-}{
-   \PassOptionsToPackage{colorlinks=true}{hyperref}
-}
-
 \usepackage{float}
 \usepackage{subcaption}
 \usepackage{tabularx}
@@ -121,17 +106,6 @@
 \usepackage{tabularx}
 \usepackage{mathtools}
 \usepackage{stackengine}\stackMath % to use \stackgap for \underbrace spacing
-\usetikzlibrary{
-   trees,
-   automata,
-   shapes,
-   backgrounds,
-   arrows.meta,
-   calc,
-   intersections,
-   positioning,
-   spy
-}
 \usepackage[
    german, % for correct hyphenation in german abstract
    english, % standard language
@@ -139,15 +113,6 @@
 ]{babel}
 \usepackage{setspace} % for adjustment of line spacing
 \usepackage[lined,boxed,linesnumbered]{algorithm2e}
-% for programmablaufplans
-\tikzstyle{typewriter} = [font=\small\ttfamily]
-\tikzstyle{decision} = [diamond, draw, typewriter,
-text width=4.5em, text badly centered, inner sep=0pt]
-\tikzstyle{block}    = [rectangle, rounded corners=5pt, draw, typewriter,
-text width=7em, text centered, minimum height=2em]
-\tikzstyle{line}     = [draw, -latex', typewriter]
-\tikzstyle{cloud}    = [draw, ellipse,fill=red!20, node distance=3cm,
-minimum height=1em, typewriter]
 
 % \expandafter\def\csname ver@subfig.sty\endcsname{} % for subcaption or
 % something
@@ -156,8 +121,6 @@ minimum height=1em, typewriter]
 \newcommand{\mbf}[1]{\mathbf{#1}} % shortcut for vector notation
 
 \newcommand{\bflabel}{\aclabelfont} % without this, compile error
-\usepackage{marginnote}
-\renewcommand{\marginfont}{\small}
 
 \usepackage{chngcntr} % defines \counterwithin
 \counterwithin{figure}{chapter} % number figures as chaptno.figno
@@ -182,18 +145,6 @@ minimum height=1em, typewriter]
 %% End Custom adjustments %%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-% ****************************************************************************************************
-% classicthesis-config.tex
-% formerly known as loadpackages.sty, classicthesis-ldpkg.sty, and classicthesis-preamble.sty
-% Use it at the beginning of your ClassicThesis.tex, or as a LaTeX Preamble
-% in your ClassicThesis.{tex,lyx} with \input{classicthesis-config}
-% ****************************************************************************************************
-% If you like the classicthesis, then I would appreciate a postcard.
-% My address can be found in the file ClassicThesis.pdf. A collection
-% of the postcards I received so far is available online at
-% http://postcards.miede.de
-% ****************************************************************************************************
 
 % ****************************************************************************************************
 % 1. Configure classicthesis for your needs here, e.g., remove "drafting" below
@@ -253,10 +204,6 @@ minimum height=1em, typewriter]
 \newcounter{dummy} % necessary for correct hyperlinks (to index, bib, etc.)
 \newlength{\abcd} % for ab..z string length calculation
 \providecommand{\mLyX}{L\kern-.1667em\lower.25em\hbox{Y}\kern-.125emX\@}
-\newcommand{\ie}{i.\,e.}
-\newcommand{\Ie}{I.\,e.}
-\newcommand{\eg}{e.\,g.}
-\newcommand{\Eg}{E.\,g.}
 % ****************************************************************************************************
 
 
@@ -377,8 +324,7 @@ minimum height=1em, typewriter]
 % Hyperreferences
 % ********************************************************************
 \hypersetup{%
-    %draft,	% = no hyperlinking at all (useful in b/w printouts)
-    colorlinks=true,
+    % draft,	% = no hyperlinking at all (useful in b/w printouts)
     linktocpage=false, pdfstartpage=3, pdfstartview=FitV,%
     % uncomment the following line if you want to have black links (e.g., for printing)
     %colorlinks=false, linktocpage=false, pdfborder={0 0 0}, pdfstartpage=3, pdfstartview=FitV,%
@@ -396,10 +342,11 @@ minimum height=1em, typewriter]
     bookmarks=true,
     pdfauthor=\myName,
     pdftitle=\myTitle,
-    colorlinks=true,
     citecolor=verydarkblue,
     urlcolor=reddish,
     linkcolor=verydarkblue
+    colorlinks=false,   % #wtflatex: This doesn't do anything, the only way to
+                        % disable colors is to remove them altogether with the drafting option
 }
 
 % ********************************************************************
@@ -485,7 +432,7 @@ minimum height=1em, typewriter]
 
 %% Should be loaded after classicthesis
 \usepackage{ebgaramond}
-\usepackage[scale=0.8]{sourcecodepro}
+\usepackage[scale=0.9]{sourcecodepro}
 
 \usepackage[noabbrev, nameinlink]{cleveref}
 

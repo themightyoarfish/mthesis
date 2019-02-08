@@ -1,6 +1,6 @@
 \chapter{Introduction}\label{sec:introduction}
 
-While the success of deep learning models has been rapid, the theoretical
+While the rise in performance of deep learning models has been rapid, the theoretical
 justification for most game-changing ideas as well as the general principles of
 deep learning has not kept pace (for more information, see \cite{arora2018}).
 This means that for many successful techniques, we have no clear understanding
@@ -9,14 +9,14 @@ why they work so well in practice.
 This explanatory gap is also a reason why developing deep learning applications
 is considered more of an art than a science. In contrast to traditional
 programming, which builds on decades of research and development in electrical
-engineering, logic, mathematics and theoretical computer science, there's rarely
+engineering, logic, mathematics and theoretical computer science, there is rarely
 one definitive way to solve a certain problem in deep learning.  Additionally,
-the quality of debugging tools available to a programmer on every level of
+the quality of debugging tools available to a traditional programmer on every level of
 abstraction far exceeds what we currently have for differentiable programming.
 Simple questions like ``Does my model learn what I want it to learn?'' are not
 answerable at this point.  We can thus identify a need to supply more useful
 tooling for deep learning researchers and practitioners.  A standard approach to
-choosing a parametrisation remains trial-and-error, or only somewhat more
+choosing a parameterisation remains trial-and-error, or only somewhat more
 sophisticated ways to run and test.  The computational cost of training large
 models prohibits quick experimentation and often translates into monetary costs
 as well.  Identifying dead ends early or points in training at which to tweak
@@ -26,7 +26,7 @@ linear algebra that is a deep learning model.
 
 This thesis addresses the above in two ways: A software library aiding in deep
 learning debugging and experimentation is designed, implemented and documented. The same
-library is then used to investigate experimentally whether unexplored
+library is then used to investigate experimentally whether heretofore unexplored
 metrics can be devised for optimising parameters of the training process while it is running.
 
 This thesis is concerned with \emph{deep} neural networks, meaning
@@ -38,7 +38,7 @@ over the dataset many times which incurs a high computational cost due
 to the massive number of matrix operations involved. Speeding up the
 training is thus one of the primary endeavours in deep learning
 research. An overview of the workings of a neural network is given in
-\cref{sec:anns}.
+the next (\cref{sec:anns}).
 
 \hypertarget{sec:anns}{%
 \section{Artificial Neural Networks}\label{sec:anns}}
@@ -50,19 +50,19 @@ presented here, which may safely be skipped or replaced by other resources.
 
 The artificial neural network is a class of machine learning model which can be
 used for prediction tasks like regression and classification, as well as for
-generation and enhancement of data.  At
-the core, neural models are simply conceptualised as an arrangement of units
-which receive numerical inputs, compute a weighted sum and thus produce an output
-activation. The ideas date back at least to Hebbian learning (a single neuron)
-in the 1940s, and were developed into the Perceptron model by
-\citet{Rosenblatt58theperceptron}. With the introduction of the backpropagation
-algorithm \citep{werbos1975beyond} and increasing availability of computing
-power, this began to change, but more easily trainable models like Support
-Vector machines eclipsed neural nets for most applications.  Architectural
-advances, such as the convolutional neural networks in the late 1980s
+generation and enhancement of data.  At the core, neural models are simply
+conceptualised as an arrangement of units which receive numerical inputs,
+compute a weighted sum and thus produce an output activation. The ideas date
+back at least to Hebbian learning (a single neuron) in the 1940s, and were
+developed into the Perceptron model by \citet{Rosenblatt58theperceptron}. At
+that time, more easily trainable models like Support Vector machines eclipsed
+neural nets for most applications, but with the introduction of the
+backpropagation algorithm \citep{werbos1975beyond} and increasing availability
+of computing power, this began to change.  Architectural advances, such as the
+convolutional neural networks in the late 1980s
 \citep{LeCun:1989:BAH:1351079.1351090} and the advent of GPU-accelerated neural
 network implementations (pioneered in \cite{Ciresan11flexible})---as well as
-subsequently, gpu-accelerated linear algebra libraries with automatic
+subsequently, GPU-accelerated linear algebra libraries with automatic
 differentiation---finally made neural networks the workhorse for many AI
 applications today.
 
@@ -89,10 +89,14 @@ If only matrix multiplication and vector addition was used, a multi-layer networ
 powerful than a single-layer one as the composition of many affine
 transformations can be expressed by a single one. Therefore, a nonlinear
 \emph{activation function} is applied component-wise to each layer's output. The
-nonlinearity is crucial to deeper networks superior capabilities. Many
+nonlinearity is crucial to deeper networks' superior capabilities. Many
 activation functions have been proposed, for instance the hyperbolic tangent,
 the sigmoid or the rectified linear unit, the latter in many variations.
-\Cref{fig:activation_functions} shows plots for these functions.
+\Cref{fig:activation_functions} shows plots for these functions. The
+choice activation function has been known impact performance significantly, and
+rectified linear units are most commonly used nowadays as they are
+computationally easy to evaluate and do not suffer from vanishing gradient
+problems.
 
 \pgfmathdeclarefunction{sigmoid}{0}{%
     \pgfmathparse{1/(1+exp(-x))}%
@@ -133,24 +137,24 @@ the sigmoid or the rectified linear unit, the latter in many variations.
 \end{figure}
 
 Training a neural network simply involves a loss function measuring the distance
-of the networks output to the desired output and differentiating it with respect
+of the network's output to the desired output and differentiating it with respect
 to the model parameters. The backpropagation algorithm provides an efficient way
 of computing all the partial derivatives of the loss with respect to each
 parameter (network weight). Parameters are usually updated with some form of the
 gradient descent optimisation algorithm. An introduction to the mathematics of
-deep neural networks is given in \cref{sec:review_stochastic_gradient_descent}.
+gradient descent optimisation is given in the following \cref{sec:review_stochastic_gradient_descent}.
 
-\section{Review: Stochastic Gradient Descent}%
+\section{Stochastic Gradient Descent}%
 \label{sec:review_stochastic_gradient_descent}
 
 In this section, we briefly survey the stochastic gradient descent algorithm.
 This algorithm is used (in some variant) for virtually all practical deep
 learning models. The name derives from the fact that the model parameters are
 updated in the direction of the negative gradient, which is the high-dimensional
-partial derivative of the scalar loss function with respect to the model parameters. It
-is stochastic as it only uses a subset of the training data at every time step
-and thus only approximates the true gradient which would have to be computed
-over the entire dataset to be learned.
+partial derivative of the scalar loss function with respect to the model
+parameters. It is stochastic as it only uses a subset of the training data
+(called \emph{batch}) at every time step and thus only approximates the true
+gradient which would have to be computed over the entire dataset to be learned.
 
 In standard stochastic gradient descent, a loss $J$ of some the
 model parameters $\boldsymbol\theta$ (here, the layer weights) is computed over the training set of $m$
@@ -270,10 +274,10 @@ Other parameters that need to be set initially are
 
 This makes finding an optimal training regimen very hard, particularly since
 training deep neural networks for realistic problems can take much longer than
-traditional methods, meaning cross-validating different models can be
-prohibitively expensive. It is therefore desirable to notice dead ends early
-during training, or be able to tweak parameters in such a way as to maximise
-convergence speed.
+traditional methods, meaning cross-validating different models or different
+parameterisations can be prohibitively expensive. It is therefore desirable to
+detect dead ends early during training, or be able to tweak parameters in such a
+way as to maximise convergence speed.
 
 This thesis work is motivated by the scarcity of useful tools to debug and
 monitor deep learning training. \citet{arpteg2018software} discuss several
@@ -281,19 +285,18 @@ challenges arising in the context of engineering larger-scale machine learning
 software and note that a lack of useful debugging tools can lead to a lot of
 wasted time and money in diagnosing problematic behaviour of a neural network.
 
-Without years of training and a lot of
-mathematical intuition and expertise, it is often very hard to figure out why a
-network is not learning or how to ensure timely convergence.  And even with this
-expertise, visualisations or metrics need to be implemented over and over again
-because common tools do not abstract from the concrete model architecture.
-Providing easy-to-use tooling and live insights also has the side-effect of
-democratising access to machine learning software. Ideally, the metrics created
-with the help of this work would enable non-experts to better understand their
-models and reduce the dependence on rare machine learning expertise. While this
-goal will likely not be achieved by this work alone, steps in the general
-direction are needed for disseminating AI advances throughout the industry, and
-counteract the tendency of large companies to reap the majority of the benefits
-brought about by deep learning.
+Without a lot of training and mathematical intuition and expertise, it is often
+very hard to figure out why a network is not learning or how to ensure timely
+convergence.  And even with this expertise, visualisations or metrics need to be
+implemented over and over again because common tools do not abstract from the
+concrete model architecture.  Providing easy-to-use tooling and live insights
+also has the side-effect of democratising access to machine learning software.
+Ideally, the metrics created with the help of this work would enable non-experts
+to better understand their models and reduce the dependence on rare machine
+learning expertise. While this goal will likely not be achieved by this work
+alone, steps in the general direction are needed for disseminating AI advances
+throughout the industry, and counteract the tendency of large companies to reap
+the majority of the benefits brought about by deep learning.
 
 There exist some monitoring tools (see \cref{sec:existing-apps}), but they
 are mostly low-level tools which provide visualisation primitives (drawing and
@@ -305,16 +308,17 @@ applied automatically to all layers.
 In contrast, the library developed in this work is geared towards modularising
 introspection metrics in such a way that they are usable for any kind of model,
 without modifications to the model code. The secondary purpose of the library is
-the enablement to quickly iterate on hypothesised metrics extracted from the
+the enabling quick iterations on hypothesised metrics extracted from the
 training in order to diagnose problems such as those outlined in
-\cref{sec:thesis-goals}. Most deep learning research involves experiments on a
-variety of architectures, datasets, and hyperparameter sets in order to validate
-an idea. All of these experiments must be implemented, which can easily lead to
-haphazard duplication of code for all the different settings, or creation of
-ad-hoc libraries that are only used in this specific work. Thus, a lot of effort
-is wasted due to the lack of more general tools and the fact that code produced
-for research often is not made public, or would require significant effort to
-generalise to other problems.
+\cref{sec:thesis-goals}. Most deep learning research and its application to
+real-world problems involves experiments on a variety of architectures,
+datasets, and hyperparameter sets in order to validate an idea. All of these
+experiments must be implemented, which can easily lead to haphazard duplication
+of code for all the different settings, or creation of ad-hoc libraries that are
+only used in this specific work. Thus, a lot of effort is wasted due to the lack
+of more general tools and the fact that code produced for research often is not
+made public, or would require significant effort to generalise to other
+problems.
 
 As such, the library shall not only be useful to end users who will make use of
 established metrics and thus save time in their model training, but also to
@@ -335,7 +339,9 @@ metric tracking which we will briefly survey in this section.
 \hypertarget{ignite}{%
 \subsection*{PyTorch Ignite}\label{ignite}}
 
-The project perhaps closest to \texttt{ikkuna} in spirit is PyTorch's
+The project perhaps closest to \texttt{ikkuna}\footnote{The name of the library
+developed for this thesis is the finnish word for \emph{window} as it permits
+insights into the training process from the outside.} in spirit is PyTorch's
 \texttt{ignite} subproject\footnote{\url{https://pytorch.org/ignite/}}. It
 defines abstractions for simplifing the setup of the training loop and for
 automatically computing metrics when events happen. It also encapsulates metrics
@@ -346,12 +352,12 @@ hand, will provide more fine-grained information on the level of individual
 layers, which is much more than \texttt{ignite} does. With respect to
 ergonomics, \texttt{ignite} is simpler to use due to the fact that metrics are
 registered by the help of function decorators on plain functions, while
-\texttt{ikkuna} requires implementation of a dedicated subscriber.
+\texttt{ikkuna} requires implementation of a dedicated subscriber subclass.
 \texttt{ignite} also does not provide any visualisation capabilities out of the
 box.
 
 We can thus summarise that \texttt{ikkuna} is focused more on collaboration
-accross projects thorugh it's plugin-based structure while \texttt{ignite} is a
+across projects through it's plugin-based structure while \texttt{ignite} is a
 less powerful but simpler to use tool for removing boilerplate in one specific
 application, as it has no notion of reusing metrics outside of where they were
 defined.
@@ -368,7 +374,7 @@ appropriate format. This enables, e.g., a PyTorch port---termed TensorBoardX---t
 use TensorBoard from frameworks other than TensorFlow.
 
 For exporting data during training, the developer adds operations to the
-graph which write scalars, histograms, audio, or other data
+computation graph which write scalars, histograms, audio, or other data
 asynchronously to disk. This data can then be displayed in approximately
 real-time in the web browser. Besides scalar-valued functions, which
 could be e.g.~the loss curve or accuracy measure, TensorBoard supports

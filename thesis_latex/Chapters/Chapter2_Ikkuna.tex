@@ -22,8 +22,8 @@ Python 3.6 and was designed with the following goals in mind:
 
 What it provides over the aforementioned tools (\cref{sec:existing-apps}) is that it enables
 working at a higher level of abstraction, liberating the developer from
-having to repeat themselves, exchanging visualisations and metrics and
-reduce the friction between development and debugging.
+having to repeat themselves, exchanging visualisations and metrics with others and
+reduces the friction between development and debugging.
 
 This chapters gives a
 high-level overview of the library components and elaborates on the design
@@ -79,10 +79,11 @@ backpropagation used in the multilayer perceptron).  Define-and-run frameworks
 like TensorFlow create the graph explicitly; the user uses the API to do exactly
 this. The graph---once compiled---is fixed for the entire training process.
 PyTorch on the other hand implicitly records all operations as they execute and
-also overloads arithmetic operators for this purpose. The graph is recreated for each
-propagation through the network and the user never directly interacts with it.
-This precludes some optimizations, but makes dynamically changing networks
-easily achievable.
+also overloads arithmetic operators for automatically constructing the graph.
+The graph is recreated for each propagation through the network and the user
+never directly interacts with it.  This precludes some optimizations, but makes
+dynamically changing networks easily achievable and the API more natural to
+users.
 
 The currently available deep learning libraries can be located on a spectrum
 between define-by-run and define-and-run.  The first extreme would be
@@ -106,7 +107,7 @@ optimizations, the main downsides are that
         \begin{lstlisting}[language=Python, label=lst:whilepy-pt, gobble=8]
         counter = torch.tensor(0)
         # repeated matrix multiplication
-        while counter < tensor:
+        while counter < N:
             counter += 1
             h = torch.matmul(W, h) + b
         \end{lstlisting}
@@ -114,7 +115,7 @@ optimizations, the main downsides are that
         one must use a construction like this
         \begin{lstlisting}[language=Python, label=lst:whilepy-tf, gobble=8]
         counter = tf.constant(0)
-        while_condition = lambda counter: tf.less(counter, tensor)
+        while_condition = lambda counter: tf.less(counter, N)
         # loop body
         def body(counter):
             h = tf.add(tf.matmul(W, h), b)
@@ -126,7 +127,7 @@ optimizations, the main downsides are that
         \end{lstlisting}
     \item
         As a corollary, the barrier of entry is higher, since a beginner cannot rely on the
-        language feature she knows but must learn how to express many concepts
+        language feature they know but must learn how to express many concepts
         without the host language.
     \item
         halting execution at arbitrary points in the training is not possible,
@@ -146,7 +147,7 @@ judged to present the best value proposition for PyTorch users.
 \begin{figure}
     \hypertarget{fig:popularity}{%
         \centering
-        \includegraphics[max width=\textwidth]{gfx/diagrams/framework_popularity/popularity.pdf}
+        \includegraphics[max width=.8\textwidth]{gfx/diagrams/framework_popularity/popularity.pdf}
         \caption[Changes in popularity of different deep learning libraries in
         research]{Changes in popularity of different deep learning libraries in
             research. Data was collected by keyword search over ICLR submissions
@@ -208,9 +209,8 @@ registrations and relays messages appropriately.
 \hypertarget{overview-of-the-library}{%
 \section{Overview of the library}\label{overview-of-the-library}}
 
-The software is structured into several packages. The root package is
-\texttt{ikkuna} which encapsulates all core
-functionality. All other packages and modules contain utilities
+The software is structured into several subpackages of the
+\texttt{ikkuna} package. Other packages and modules contain utilities
 implemented for this work specifically, but will generally not be
 relevant to other users. A survey of these tools will be given in
 \cref{sec:other-tools}. This section surveys the structure of the codebase and
@@ -234,18 +234,18 @@ implements the Publisher-Subscriber pattern. Extracting data from the
 training process, defining subscriber functionality and messages used
 for communication is done here.
 
-The \texttt{models} (see \cref{sec:pack-models}) subpackage contains a few
+The \texttt{models} subpackage (see \cref{sec:pack-models}) contains a few
 exemplary neural network definitions which are wired up with the library and can
-thus be used to showcase the library's functionality. The \texttt{utils} (see
-\cref{sec:pack-utils}) subpackage contains miscellaneous utility classes and
+thus be used to showcase the library's functionality. The \texttt{utils} subpackage (see
+\cref{sec:pack-utils}) contains miscellaneous utility classes and
 functions used throughout the core library. Lastly, the \texttt{visulization}
 subpackage (\cref{sec:pack-visualization}) contains the plotting functionality
 to actually show the metrics computed during the training process.
 
 \hypertarget{sec:pack-export}{%
-\subsection{The \texttt{export} subpackage}\label{sec:pack-export}}
+\subsection{The \texttt{ikkuna.export} subpackage}\label{sec:pack-export}}
 
-The \texttt{export} subpackage contains the core part
+The \texttt{ikkuna.export} subpackage contains the core part
 of the library, i.e.~it provides the classes that handle discovering the
 structure of the neural network model, attaching the appropriate
 callbacks and intercepting method calls on the model so the library is
@@ -264,7 +264,7 @@ The package comprises three subpackages or modules listed in
     \label{tbl:ikkuna.export}
     \begin{tabularx}{\textwidth}{lX}
         \toprule
-        Name                & Function\tabularnewline
+        Submodule           & Function\tabularnewline
         \midrule
         \texttt{export}     & Define the publisher discovering an arbitrary model and relaying messages to the message server\tabularnewline
         \texttt{messages}   & Define message interface, i.e.~what topics exist and which information a message must contain\tabularnewline
@@ -273,7 +273,7 @@ The package comprises three subpackages or modules listed in
     \end{tabularx}
 \end{table}
 
-\subsubsection*{The \texttt{ikkuna.export} subpackage}
+\subsubsection*{The \texttt{ikkuna.export.export} submodule}
 
 \begin{figure}
     \hypertarget{fig:pack-diag-export}{%
@@ -284,7 +284,7 @@ The package comprises three subpackages or modules listed in
 \end{figure}
 
 In in slight deviation from the Publisher-Subscriber framework as displayed in
-\cref{fig:pubsub}, the \texttt{export.Exporter} class
+\cref{fig:pubsub}, the \texttt{ikkuna.export.Exporter} class
 (\cref{fig:class-diag-exporter}) is the sole publisher of data. There is only one
 source of data during training, so it is unnecessary to accommodate multiple
 publishers. The \texttt{Exporter} is informed of the model with its methods
@@ -300,7 +300,7 @@ gradients are computed for the layer outputs. PyTorch provides the
 \lstinline+add_forward_hook()+ and \lstinline+add_backward_hook()+ functions on
 modules (layers) and \lstinline+add_hook()+ function on Tensors to register
 callbacks. All added modules are also given a name---either set by the user
-during creation of the model or generated automatically. The name is necessary
+during registration of the module or generated automatically. The name is necessary
 for display purposes.
 
 The callbacks also use cached weights---if present---in order to publish updates to the weights.
@@ -318,7 +318,7 @@ locally which have access to the \lstinline+Exporter+ instance---so it can
             previous layer with the mean and variance over the entire batch of
             data---optionally with running means and variances over the
             previous training steps. The variance is not defined for
-            single data point enters the layer, as could be the case during
+            single data point entering the layer, as could be the case during
             inference/testing time. The layer therefore stores running estimates
             of mean an variance during training and uses them during test time.
             The second case is the dropout layer, which
@@ -339,9 +339,9 @@ locally which have access to the \lstinline+Exporter+ instance---so it can
         used be subscribers to temporarily turn off training mode and have it
         revert automatically. This is useful for subscribers which need to
         evaluate the model and are thus given limited access through the
-        \lstinline+forward()+ method, but do not want the \lstinline+Exporter+
-        to generate new messages for this occasion (this could even lead to
-        infinite loops).
+        \lstinline+forward()+ method, but want the following messages emitted by
+        the \lstinline+Exporter+ to carry a specific tag, so that subscribers
+        listening to the default tag are not notified.
     \item
         intercept inputs and labels passed to the loss function during training and
         publish them as messages so the user need not concern himself with
@@ -349,9 +349,11 @@ locally which have access to the \lstinline+Exporter+ instance---so it can
         batch with the subscriber framework.
     \item
         intercept the final output of the network. This could be realised
-        alternatively by identifying the last module in the network, but is
+        alternatively by identifying the last module in the network and
+        attaching specific callbacks only to it, but is
         easier to do by patching the loss function set with
-        \lstinline+set_loss()+.
+        \lstinline+set_loss()+, since the loss function will always be evaulated
+        with the network output.
 \end{itemize}
 
 At every time step (training batch), the \texttt{Exporter} publishes the
@@ -413,20 +415,20 @@ defined in this module is shown in \cref{fig:messages_class_diag}.
 
 Messages are of one of two types: They are either directly tied to a layer in
 the network and are thus published for each layer, or they contain information
-for the current training step applying to the entire network. In that case, they
-appear only once per training step, not once per layer. The meta-messages can
+for the current epoch or training step applying to the entire network. In that case, they
+appear only once per epoch or training step, not once per layer. The meta-messages can
 carry tensor data (e.g.~input data or labels), but need not to
 (e.g.~notifications about a starting or ending epoch). All message kinds are
 summarised in \cref{tbl:messages}.
 
 Messages can be assembled into bundles if a subscribers wants to subscribe
 several topics at once. The \texttt{MessageBundle} class performs all necessary
-error checking to ensure consistency of the contained messages (only messages of
+error checking to ensure consistency of the contained messages (e.g.~only messages of
 from the same time step are allowed).
 
 The message server from \cref{fig:pubsub} is implemented by the
 \texttt{MessageBus} class which receives publishers' messages, accepts
-subscribers registrations, and maintains the lists of known topics. Each
+subscriber registrations, and maintains the lists of known topics. Each
 subscriber may in turn announce one or more new topics which can then be
 subscribed to by others. This is useful since it allows chaining of subscribers
 in order to realise arbitrary post-processing of computed metrics.
@@ -681,6 +683,7 @@ server responds to HTTP requests). An example is shown in \cref{fig:example_tb}.
 
 There are a few modules which simplify development with the library but are not
 part of the distribution obtained from PyPi or by running the setup script.
+Nevertheless, they can be used by the reader to start using the library.
 
 The \texttt{train} package defines a \texttt{Trainer} class which encapsulates
 all the logic and parameters needed to train a neural network on one of the
@@ -702,10 +705,7 @@ datasets provided with PyTorch. The class's capabilities include the following
 
 The \texttt{Trainer} class is used in the main script (\texttt{main.py}), which
 serves as a command line interface to the library while developing. When trying
-out the library, it can also be used as an initial starting point.\footnote{It
-was later discovered that a subproject of PyTorch named \texttt{ignite} provides
-some of the same functionality.}
-
+out the library, it can also be used as an initial starting point.
 \begin{table}
     \caption{Named arguments to \texttt{main.py}}
     \begin{tabularx}{\linewidth}{lX}
@@ -731,9 +731,13 @@ some of the same functionality.}
     \end{tabularx}
 \end{table}
 
+All experimental code used for \cref{ch:experiments} is located in the \texttt{experiments} subfolder
+accompanying this thesis. It can be used for reproducing all experiments
+conducted for this work.
+
 The library can be installed to the local Python environment by use of the
 provided setuptools script (\texttt{setup.py}). It can also be downloaded from
-the \href{https://pypi.org/}{Python Package Index} by use of the package manager
+the Python package index\footnote{\url{https://pypi.org/}} by use of the package manager
 \texttt{pip}:
 \begin{lstlisting}[language=Python]
 pip install ikkuna
@@ -799,8 +803,8 @@ Stockholm, Sweden. Peltarion's stated mission is to
 \begin{quote}
     [provide] an
     operational AI platform for producing real-world AI applications at scale and at
-    speed.
-\end{quote}\footnote{\url{https://www.peltarion.com/about}, accessed 17/01/19}
+    speed.\footnote{\url{https://www.peltarion.com/about}, accessed 17/01/19}
+\end{quote}
 
 The Peltarion platform is a web-based deep learning platform with which users
 can upload, preprocess and modify datasets, create deep neural architectures
