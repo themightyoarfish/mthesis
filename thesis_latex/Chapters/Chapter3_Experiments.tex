@@ -15,7 +15,7 @@ The chapter is divided between a reproduction part (see
 \cref{sec:adam}) and an original research part (see
 \cref{sec:detecting_learning_rate_problems} and
 \cref{sec:detecting_layer_saturation}). In the former, experiments conducted
-for a popular variant of stochastic gradient descent (hence referred to as SGD
+for a popular variant of stochastic gradient descent (henceforth referred to as SGD
 ) are reproduced and extended with
 the help of the library. The goal is to fact-check claims made by the authors
 and validate said claims on more scenarios than are shown in the
@@ -24,15 +24,18 @@ employed for this type of work. The second part will be concerned with employing
 the library to investigate hypotheses for diagnosing roadblocks in the training
 process. Recall from \cref{sec:motivation} the multitude of hyperparameters
 for a deep learning model and training regimen. In this work, we will concern
-ourselves with the question of figuring out a good learning rate and when to
-stop training layers to reduce computation time.
+ourselves with two questions:
+\begin{enumerate}
+    \item How can we figure out a good learning rate?
+    \item (When) should we stop training layers to reduce computation time?
+\end{enumerate}
 
 This thesis is not concerned with advancing the state of the art in
-classification. Instead, toy problems are developed in order to prove or
-disprove that the proposed metrics have the potential to be useful in guiding
-the training. A more thorough evaluation of the results on realistic
-architectures and problem sizes would require significantly more time and
-computational resources and is left for future work.
+classification. Instead, classical datasets are used on toy models and standard
+models in order to prove or disprove that the proposed metrics have the
+potential to be useful in guiding the training. A more thorough evaluation of
+the results on realistic architectures and problem sizes would require
+significantly more time and computational resources and is left for future work.
 
 \section{Experimental Methodology}%
 \label{sec:experimental_methodology}
@@ -45,6 +48,34 @@ information captured by \texttt{ikkuna} during training is logged to a MongoDB
 schemaless database with the help of the \texttt{sacred} library. The data can
 then be analysed off-line with MongoDB's Python interface. Plots are created
 with \texttt{matplotlib}. % and \texttt{seaborn}.
+
+A subscriber is used to log all the computed metrics to a MongoDB database via
+the \texttt{sacred} library (\cref{lst:logging-sub}). While the cleaner approach
+here would be to implement a \texttt{SacredBackend} to log the metrics
+automatically, this would require some thought about the differing capabilities
+of different backends. For instance, there is no native form of histogram
+storage in \texttt{sacred}, while it is easy to provide through TensorBoard or
+Matplotlib. Therefore, this backend is left for future work and a Subscriber is
+used instead for this limited set of experiments.
+
+\begin{lstlisting}[label={lst:logging.sub},
+caption={Subscriber for logging metrics}]
+class SacredLoggingSubscriber(Subscriber):
+  '''Subscriber which logs its subscribed values with sacred's metrics API'''
+
+  def __init__(self, experiment, kinds):
+    self._experiment = experiment
+    subscription     = Subscription(self, kinds)
+    super().__init__([subscription], get_default_bus())
+
+  def compute(self, message):
+    if message.key != 'META':
+      name = f'{message.kind}.{message.key.name}'
+    else:
+      name = message.kind
+  self._experiment.log_scalar(name, float(message.data), message.global_step)
+\end{lstlisting}
+
 
 \section{Validating Optimiser Research}%
 \label{sec:adam}
@@ -86,7 +117,7 @@ The parameter updates are computed as
 \end{quote}
 
 Intuitively, the magnitudes of the update to a parameter will scale linearly
-with the manitude of the running gradient mean (which is effectively a form of
+with the magnitude of the running gradient mean (which is effectively a form of
 momentum), but normalised with the magnitude of the running gradient variance so
 that the update is smaller when the gradient is very noisy and larger when there
 is more certainty of the direction of the true gradient.
@@ -121,16 +152,8 @@ through division by zero in computing the metrics. In the pathological case
 where this leads to an empty tensor, we plot NaN (leading to an omission of the
 value), since we would otherwise have to work around metric logs with different
 step vectors.
-
 The subscriber used for recording all the information is displayed in
-\cref{lst:running_moments_sub}. A second subscriber is used to log all the
-computed metrics to a MongoDB database via the \texttt{sacred} library. While
-the cleaner approach here would be to implement a \texttt{SacredBackend} to log
-the metrics automatically, this would require some thought about the differing
-capabilities of different backends. For instance, there is no native form of
-histogram storage in \texttt{sacred}, while it is easy to provide through
-TensorBoard or Matplotlib. Therefore, this backend is left for future work and a
-Subscriber ist used instead for this limited set of experiments.
+\cref{lst:running_moments_sub}.
 
 \begin{lstlisting}[label={lst:running_moments_sub},
 caption={Subscriber to record Adam terms}]
@@ -261,25 +284,6 @@ class BiasCorrectedMomentsSubscriber(PlotSubscriber):
                                               message.key, data)
 \end{lstlisting}
 
-The subscriber for logging the metrics is trivial:
-\begin{lstlisting}
-class SacredLoggingSubscriber(Subscriber):
-  '''Subscriber which logs its subscribed values with sacred's metrics API'''
-
-  def __init__(self, experiment, kinds):
-    self._experiment = experiment
-    subscription     = Subscription(self, kinds)
-    super().__init__([subscription], get_default_bus())
-
-  def compute(self, message):
-    if message.key != 'META':
-      name = f'{message.kind}.{message.key.name}'
-    else:
-      name = message.kind
-  self._experiment.log_scalar(name, float(message.data), message.global_step)
-\end{lstlisting}
-
-
 \subsection{Experiments}%
 \label{sub:experiments}
 
@@ -343,7 +347,7 @@ level of individual layers. The question of how to summarise e.g. the gradient
 mean estimate for an entire layer remains. Candidates are
 \begin{enumerate}
     \item the average over all units
-    \item the norm of the estimate
+    \item the norm over all units
     \item the median over all units
 \end{enumerate}
 The first option suffers from the fact that the gradient distribution is
@@ -415,13 +419,13 @@ $\epsilon$ may therefore be inaccurate, at least we cannot show this to be the
 case. It is unclear how \citeauthor{kingma2014adam} evaluate the tensor-valued
 second moment estimate to arrive at this conclusion.
 
-We will now turn to a qualitative and quantitative evaluation of how Adam
-performs on fully-connected and convolutional architectures and whether it
-actually tunes the learning rate like \citet{kingma2014adam} suggest.
-
 \subsubsection{Behaviour of the Adam Update Rule on different Neural
 Architectures}
 \label{subsec:adam-behaviour}
+
+We will now turn to a qualitative and quantitative evaluation of how Adam
+performs on fully-connected and convolutional architectures and whether it
+actually tunes the learning rate like \citet{kingma2014adam} suggest.
 
 \Cref{fig:adammodel} shows the evolution of Adam's terms and the effective
 learning rate for different base learning rates. We can see that, surprisingly,
@@ -451,6 +455,8 @@ variance stagnates. It is not clear how to derive a
 that the running gradient variance could play a role in such a metric.
 
 \begin{figure}
+    \caption{Adam metrics on the Adam-Convnet with different learning rates and
+    Adam optimiser}
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
@@ -484,6 +490,8 @@ normalisation applied between layers to see whether their influence---which
 should counteract any variance increase---invalidates this hypothesis.
 
 \begin{figure}
+    \caption{Adam metrics on the Adam-Convnet with different learning rates and
+    SGD optimiser}
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
@@ -507,7 +515,7 @@ should counteract any variance increase---invalidates this hypothesis.
     is what would be used in the Adam update.}
 \end{figure}
 
-The experiments above where run on the fully connected model as well (see
+The experiments above were run on the fully connected model as well (see
 \cref{fig:fully-connected}). The results are shown in
 \cref{fig:fully-connected-experiment}. The first thing we notice is that Adam
 behaves very differently in the absence of convolutional layers. Whereas we saw
@@ -525,6 +533,8 @@ moment estimate vanishes completely, leading to zero-valued gradients and no
 learning at all.
 
 \begin{figure}
+    \caption{Adam metrics on fully linear model with different learning rates and
+    Adam optimiser}
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
@@ -578,7 +588,7 @@ individual layers can range from $10^{-3}$ all the way up to $10$, which would
 never work when applied to an entire network. More work would be necessary to
 check whether using these learning rates for SGD would achieve the same
 performance. If not, then this would prove that Adam finds qualitatively
-different paths through the weight space by incoporating past gradient
+different paths through the weight space by incorporating past gradient
 information. Reason to believe that this is indeed the case is supported by
 \citet{NIPS2018_7815} who find that the representations learned by the same
 network with different learning rates are qualitatively different.
@@ -592,42 +602,48 @@ more experiments than \citet{kingma2014adam} provided.
 \section{Detecting Learning Rate Problems}%
 \label{sec:detecting_learning_rate_problems}
 
+In this section, we will investigate a new way to automatically detect learning
+rate problems based on a statement made by Andrej Karpathy. We will discuss
+the validity of his recommendation by tracking the proposed
+Update-to-Weight-Ratio in a variety of scenarios and implementing a learning
+rate schedule based on it. The question to be answered here is whether a metric
+based on the ratio can be used for automatically adjusting the learning rate,
+or---if unsuccessful---for detecting pathological states during training.
+
 \subsection{Ratio-Adaptive Learning Rate Scheduling}%
 \label{sub:ratio_adaptive_learning_rate_scheduling}
 
-The first problem to be investigated is that of choosing an appropriate learning
-rate. We begin with a brief review of gradient descent and then evaluate how
-the update-to-weight ratio of model weights can be used to identify bad learning
-rates or automate learning rate selection.
-
-As a first hypothesis, we investigate a claim made by \citet{karpathycs231n} who
-states that the ratio between updates and weights is a quantity which should be
-monitored and constrained. He suggests a target of $\frac{1}{t} = 10^{-3}$ as a
-reasonable value, but to the author's knowledge there has never been a thorough
-investigation of this hypothesis. Because of this lack of exploration and the
-celebrity of the proponent, this merits further investigation.
+We investigate a claim made by \citet{karpathycs231n} who states that the ratio
+between updates and weights $\frac{||\Delta_{W_i}||}{||W_i||}$, is a quantity which should
+be monitored and constrained. He suggests a target of $\frac{1}{t} = 10^{-3}$ as
+a reasonable value, but to the author's knowledge there has never been a
+thorough investigation of this hypothesis. Because of this lack of exploration
+and the celebrity of the proponent, this merits further investigation.
 
 It seems intuitive that this target cannot be static throughout training, since
 we usually decay the learning rate towards the end, leading to smaller magnitude
 of updates (this is a prerequisite for theoretical convergence guarantees for
 SGD, see \citet[p. 20]{saad1998online}). As a matter of fact, this can be easily
 verified by running training with an update rule that scales each gradient so
-that the update hits the target (the network does learn, but to a significantly
+that the update hits the target exactly (the network does learn, but to a significantly
 smaller final accuracy; see \cref{fig:fixed-ratio-opt}). It is also not clear
 whether the target should apply to all layers equally, since this would
 constitute a strong regulariser on the network parameters, limiting
-expressiveness of the model. For instance, in networks with the (now outdated)
-$\text{tanh}$ activation function, the later layer's gradients are larger as
+expressiveness of the model. We also verified in \cref{sec:adam} that
+convolutional layers should use a smaller learning rate then linear ones.
+
+For another instance, in networks with the (now outdated)
+$\text{tanh}$ activation function, the later layers' gradients are larger as
 fewer backpropagation steps have been done to them, and for this activation
 function at least, each application of the chain rule entails multiplication
-with a factor $< 1$ (as the tanh derivative never exceeds $1$ and decreases to
+with a factor $< 1$ (as the $\text{tanh}$ derivative never exceeds $1$ and decreases to
 almost $0$ in both limits), so gradients become exponentially small. In fact,
 the vanishing gradient problem was the main driver to introduce non-saturating
 activation functions.  Other nonlinearites such as the rectified linear unit do
 not exhibit the same behaviour, but that does not mean all layers must change at
 the same rate.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/alexnetmini_sgd_fixed_ratio_01.pdf}
     \caption[Fixed-Ratio optimisation with AlexNetMini on CIFR10]{AlexNetMini on CIFAR10 at $0.1$ learning rate. The blue line is
@@ -642,17 +658,28 @@ rate in such a way as to hit the target postulated by
 over all layers. This would allow for more flexibility in the weight updates
 compared to fixing each update to the same value.
 
-The experimental setup uses the simplified AlexNet architecture
-(\cref{sec:pack-models}) shown in \cref{fig:alexnetmini}. The dataset used is
-the well-known CIFAR-10 dataset consisting of $60,000$ $32\times32$ colour images
-from ten object categories \citep{krizhevsky2009learning}. The optimisation
-algorithm used is plain stochastic gradient descent on minibatches of size $128$. The
+\begin{table}[h]
+    \centering
+    \caption{Hyperparameters for the fixed-ratio experiment}
+    \label{tbl:params-fixed-ratio}
+    \begin{tabular}{ll}
+        Parameter            & Value \\\hline\hline
+        Architecture            & Minified AlexNet (\cref{fig:alexnetmini})\\\hline
+        Optimiser            & Vanilla SGD \\\hline
+        Epochs               & $100$ \\\hline
+        Dataset              & CIFAR10\tablefootnote{The dataset consists of $60,000$ $32\times32$ colour images from ten object categories \citep{krizhevsky2009learning}} \\\hline
+        Batch size           & $128$ \\\hline
+        Learning rate       & $0.2$
+    \end{tabular}
+\end{table}
+
+The settings for this experiment are listed in \cref{tbl:params-fixed-ratio}. The
 dataset does not constitute a hard problem to solve; state of the art accuracies
 lie around $95\%$. For this reason, a decision must be made about how to make
 the problem hard enough so that improvements to the training schedule can
 actually be made. The learning rate has thus been fixed to a high value of $0.2$
 which is not the optimal value (a learning rate of $0.1$ solves the problem to
-$45\%$ accuracy).
+a better $45\%$ accuracy).
 
 \begin{figure}
     \centering
@@ -674,22 +701,28 @@ decaying rate according to
 \begin{equation}
     \eta_{e+1}  = 0.98^{e+1} \eta_{e},
 \end{equation}
-$e$ being the epoch index.
-The final accuracies after $100$ epochs of training for constant learning rate,
-exponential decay are shown in \cref{fig:validation1}. As can be seen, there is
-a significant improvement when decaying the learning rate over keeping it
-constant.
+$e$ being the epoch index.  The final accuracies after $100$ epochs of training
+for constant learning rate, ratio-adaptive learning rate and a control condition
+of exponential decay are shown in \cref{fig:validation1}. As can be seen, there
+is a significant improvement when decaying the learning rate at a commonly used
+exponential schedule, meaning the problem constructed here has lots of room for
+improvement. We also show results for adapting the learning according to the
+update-to-weight-ratio which will be introduced in the next \cref{subsec:ratio-schedule}.
 
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/experiment_validation.pdf}
-    \caption[Final accuracies after 100 epochs]{Final accuracies after 100
-    epochs with a learning rate of $0.2$ and batch size of $128$. The adaptive
-    ratio schedule is discussed in\cref{sec:ratio-schedule}}
+    \caption[Fixed-Ratio: Final accuracies after 100 epochs]{Final accuracies
+        after 100 epochs with a learning rate of $0.2$ and batch size of $128$.
+        The adaptive ratio schedule is discussed in \cref{subsec:ratio-schedule}.
+        The exponential schedule performs slightly better than the adaptive one,
+        but also exhibits greater variance in its results. This may be caused by
+        it not being adaptive to the problem at hand. We thus surmise that using the
+        ratio-based schedule is worth investigating.}
     \label{fig:validation1}
 \end{figure}
 
-\subsubsection{The Adaptive Update-to-Weight-Ratio Schedule}\label{sec:ratio-schedule}%
+\subsubsection{The Adaptive Update-to-Weight-Ratio Schedule}\label{subsec:ratio-schedule}%
 
 As a first showcase of the library and a test of the update-weight ratio
 hypothesis, an adaptive learning rate based on the aforementioned ratio is
@@ -733,11 +766,12 @@ learning rates. The network was trained from scratch $5$ times for each combinat
 \begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_adaptive_accuracies.pdf}
-    \caption[Accuracy traces for different schedules on CIFAR-10]{Accuracy traces
-    for different schedules on CIFAR-10. Batch size and initial learning rate are
-    shown above each subplot. The exponential decay schedule uses a decay factor of
-    $0.98$. Chance level is $0.1$. The experiments are run for $100$ epochs
-    each.}
+    \caption[Accuracy traces for different schedules on CIFAR-10]{Accuracy
+        traces for different schedules on CIFAR10. Error bars show the minimal
+        and maximal values over all runs. Batch size and initial learning rate
+        are shown above each subplot. The exponential decay schedule uses a
+        decay factor of $0.98$. Chance level is $0.1$. The experiments are run
+    for $100$ epochs each.}
     \label{fig:schedule-accuracies}
 \end{figure}
 
@@ -763,7 +797,8 @@ When an \verb+Exporter+ is configured for a given model, a
 bus in order for the update-weight-ratio ($R_{i,k}$ in the above equations) to be
 published. One can then subscribe them and process the information with this
 subscriber:
-\begin{lstlisting}
+\begin{lstlisting}[label={lst:ratiolr-sub}, caption={Ratio-Based LR subscriber
+and scheduler}]
 class RatioLRSubscriber(PlotSubscriber):
     def __init__(self, base_lr, smoothing=0.9, target=1e-3, max_factor=500):
         subscription = Subscription(self, ['weight_updates_weights_ratio', 'batch_started'],
@@ -1139,8 +1174,8 @@ obvious dependency between them---problems can still be learned with a smooth
 loss decrease even when influencing the UW ratio via learning rate scheduling.
 
 However, more work would be necessary to check whether a moving target could
-help optimisation. We have seen througout this section that  when learning works
-well, the ratio decays similarly to a an exponential, which opens the
+help optimisation. We have seen throughout this section that  when learning works
+well, the ratio decays similarly to an exponential, which opens the
 possibility for scheduling the learning rate with some decay function and a base
 value (such as $10^{-3}$).  While this may not aid convergence in cases that are
 well-behaved, it could move models out of areas they would otherwise spend too
@@ -1249,7 +1284,7 @@ principal component analysis.
             \end{bmatrix} \\
     \intertext{We then get a matrix whose rows are identical---the mean over the first dimension}
     M_k & = (1, \ldots, 1)^T \cdot \frac{1}{n}\sum_{i=0}^{n-1} L_k(i,:)
-    \intertext{We can then compute the centered covariance matrix of the data}
+    \intertext{We can then compute the centred covariance matrix of the data}
     C   & = (L_k - M_k)^T \cdot (L_k - M_k)
     \intertext{Diagonalising this matrix through SVD yields}
     C   & = U \Sigma V
@@ -1295,8 +1330,6 @@ input vectors of random variables need not be of the same length. This property
 is important for comparing different layers and architectures, but immaterial
 for our experiments.
 
-Todo: Elaborate on difference between linear and conv layers
-
 \subsection{Implementation of SVCCA}%
 \label{sub:implementation_of_svcca}
 
@@ -1327,7 +1360,7 @@ of the similarity computation in which noise is progressively added to the
 activations before the computations until the procedure converges successfully.
 Other potential workarounds for ill-conditioned covariances include
 \begin{itemize}
-    \item Adding a small constant to the diagnoal of the covariance matrix (this
+    \item Adding a small constant to the diagonal of the covariance matrix (this
         is known as \emph{nugget regularisation})
     \item Adjusting the threshold parameter generally used in SVD algorithms to
         cut off singular values close to zero
@@ -1335,7 +1368,7 @@ Other potential workarounds for ill-conditioned covariances include
 The efficacy of these parameters would need extensive evaluation.
 
 This solution notwithstanding, it turned out
-that the \texttt{torch.mean()} function behaves slightly differently from the
+that the \texttt{torch.mean()} function behaves slightly differently from
 the NumPy equivalent, possibly losing precision somewhere, which changes the
 covariances (see \cref{eq:cov}).  The entries of the covariance matrices are
 often smaller than $0.1$, while maximal differences between NumPy and PyTorch
@@ -1353,13 +1386,13 @@ For this reason, the experiments
 performed here use NumPy for computing the SVCCA metric. This incurs high data
 transfer overhead, but is more stable and sufficient to answer the question of whether the
 metric can be useful at all. An investigation of the limitations of the GPU
-impelementation is left for future work.
+impleementation is left for future work.
 
 
 \subsection{Experiments}%
 \label{sub:saturation-experiments}
 
-The hypothesis to be tested in this seciton is whether the similarity of a layer
+The hypothesis to be tested in this section is whether the similarity of a layer
 to itself at previous point in training can be used as a heuristic for
 determining when to stop training the layer, thus saving all gradient
 computation for this layer. For this purpose a dedicated subscriber is
@@ -1541,9 +1574,26 @@ similarity routine were fixed for theses experiments.
         neurons never respond for any dataset, thus providing no information and
         reducing the rank of the covariance matrix (since some variables---columns of
         the data matrix $L_k$---would be linearly related) even though with a better
-        dataset we might have had a larger rank and hence a different SV decomposition.
-    \item A similarity threshold at which we determine the layer doesn't change
-        anymore must be found. This value should be determined through thorough
+        dataset we might have had a larger rank and hence a different SV
+        decomposition. The number of datapoints is also relevant, as too few
+        samples will not give accurate estimates for the representation.
+        \citeauthor{raghu2017svcca} suggest an order of magnitude more samples
+        than units for a given layer.\footnote{This statement was made in
+        the code released for the publication at
+        \url{https://github.com/google/svcca/blob/master/tutorials/001_Introduction.ipynb}
+        and during personal correspondence.} For convolutional layers, a
+        convenient multiplier for the number of samples is found in the
+        different spatial locations. Each location in the output feature map can
+        be thought of as a different datapoint since it ``sees'' a different part of
+        the input data. We can therefore get away with very few samples for
+        estimating the SVCCA score for a convolutional layer. For dense ones,
+        which often have thousands of units, using an order of magnitude more
+        samples is infeasible in practice, so all scores reported for linear
+        layers in these experiments should be regarded with scepticism as more
+        work is required to determine how reliability of estimates changes with
+        the number of samples.
+    \item A similarity threshold at which we determine the layer does not change
+        any more must be found. This value should be determined through thorough
         experimentation (\texttt{ikkuna} can be used to evaluate different
         thresholds on a wide range of models), but the experiments here use
         correlation thresholds of $0.99$ and $0.995$.
@@ -1579,7 +1629,7 @@ appropriate for standard gradient descent. The different learning rates are
 split among \cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.01$),
 \cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.1$) and
 \cref{fig:saturation_alexnet_vgg_sgd_05_similarity} ($\eta = 0.5$). All graphs are averages
-of several runs, noted in parantheses in the legend. For thresholds on the
+of several runs, noted in parentheses in the legend. For thresholds on the
 self-similarity score we use $0.99$, $0.995$ and also report control runs
 without layer freezing (denoted by ``never'' in the graphs) and the heuristic
 from \citep{raghu2017svcca} (see \cref{sub:saturation-background}).
@@ -1590,12 +1640,12 @@ Focusing on the accuracy graphs (upper row) shows that for both thresholds and
 models, accuracy is not negatively impacted, testifying that layer freezing can
 always be appropriate. Except for the largest learning rate on the smaller model
 (\cref{fig:saturation_alexnet_vgg_sgd_05_similarity}), the self-similarity-based
-schedule for freezin is also not worse than the fixed one. For the smaller
+schedule for freezing is also not worse than the fixed one. For the smaller
 model, freezing layers even resulted in increases accuracy. One explanation for
 this could be that the model is more prone to overfit than the VGG network,
 despite its smaller size. In that case, freezing layers before they start to
 memorise the data could prevent this from happening.  For the higher of the two
-thresholds, improvents could only be observed for the smaller two learning
+thresholds, improvements could only be observed for the smaller two learning
 rates. In contrast, at a learning rate of $0.5$, waiting until a layer reaches
 $0.995$ saturation seems to allow the model to overfit too much, while the lower
 learning rates are not high enough to show this problem.
@@ -1711,7 +1761,7 @@ especially in light of a possible GPU implementation of SVCCA, most of which
 could be done asynchronously.
 
 For the smaller of the two models (left plots), we see again that the two
-convolutional layers areconverged right after the first epoch or the second,
+convolutional layers are converged right after the first epoch or the second,
 respectively. The precise threshold value does not seem to matter so much.
 Saturating the first linear layer takes much longer and the different thresholds
 lead to different times until convergence. A higher learning rate of $0.1$ (see

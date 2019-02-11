@@ -104,7 +104,7 @@ optimizations, the main downsides are that
     \item
         control flow cannot use the host language features, but must be done
         with the API used for defining models. Instead of
-        \begin{lstlisting}[language=Python, label=lst:whilepy-pt, gobble=8]
+        \begin{lstlisting}[label={lst:whilepy-pt}, gobble=8]
         counter = torch.tensor(0)
         # repeated matrix multiplication
         while counter < N:
@@ -113,7 +113,7 @@ optimizations, the main downsides are that
         \end{lstlisting}
 
         one must use a construction like this
-        \begin{lstlisting}[language=Python, label=lst:whilepy-tf, gobble=8]
+        \begin{lstlisting}[label={lst:whilepy-tf}, gobble=8]
         counter = tf.constant(0)
         while_condition = lambda counter: tf.less(counter, N)
         # loop body
@@ -423,8 +423,8 @@ summarised in \cref{tbl:messages}.
 
 Messages can be assembled into bundles if a subscribers wants to subscribe
 several topics at once. The \texttt{MessageBundle} class performs all necessary
-error checking to ensure consistency of the contained messages (e.g.~only messages of
-from the same time step are allowed).
+error checking to ensure consistency of the contained messages (e.g.~only
+messages from the same time step are allowed).
 
 The message server from \cref{fig:pubsub} is implemented by the
 \texttt{MessageBus} class which receives publishers' messages, accepts
