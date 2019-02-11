@@ -59,8 +59,8 @@ that time, more easily trainable models like Support Vector machines eclipsed
 neural nets for most applications, but with the introduction of the
 backpropagation algorithm \citep{werbos1975beyond} and increasing availability
 of computing power, this began to change.  Architectural advances, such as the
-convolutional neural networks in the late 1980s
-\citep{LeCun:1989:BAH:1351079.1351090} and the advent of GPU-accelerated neural
+convolutional neural networks in the late 1980s (\citep{lecun1989generalization,
+LeCun:1989:BAH:1351079.1351090}) and the advent of GPU-accelerated neural
 network implementations (pioneered in \cite{Ciresan11flexible})---as well as
 subsequently, GPU-accelerated linear algebra libraries with automatic
 differentiation---finally made neural networks the workhorse for many AI
@@ -126,14 +126,13 @@ problems.
 \end{figure}
 
 \begin{figure}
-    \hypertarget{fig:neuralnet}{%
-        \centering
-        \includegraphics[max width=\textwidth]{gfx/diagrams/neural_network/neural_net.pdf}
-        \caption[Schema of a multi-layer neural network]{Schema of a multi-layer neural network. \(\mathbf{x}_i\) are
-            the input values, \(a_{l_n,i}\) the \(i\)-th activation in layer \(l_n\)
-            and \(w_{l_n,i,j}\) the weight between the \(i\)-th unit in layer
-        \(l_n\) and the \(j\)-th unit in layer \(l_{n+1}\)}\label{fig:neuralnet}
-    }
+    \centering
+    \includegraphics[max width=\textwidth]{gfx/diagrams/neural_network/neural_net.pdf}
+    \caption[Schema of a multi-layer neural network]{Schema of a multi-layer neural network. \(\mathbf{x}_i\) are
+        the input values, \(a_{l_n,i}\) the \(i\)-th activation in layer \(l_n\)
+        and \(w_{l_n,i,j}\) the weight between the \(i\)-th unit in layer
+    \(l_n\) and the \(j\)-th unit in layer \(l_{n+1}\)}
+    \label{fig:neuralnet}
 \end{figure}
 
 Training a neural network simply involves a loss function measuring the distance
@@ -143,6 +142,57 @@ of computing all the partial derivatives of the loss with respect to each
 parameter (network weight). Parameters are usually updated with some form of the
 gradient descent optimisation algorithm. An introduction to the mathematics of
 gradient descent optimisation is given in the following \cref{sec:review_stochastic_gradient_descent}.
+
+The schema shown in \cref{fig:neuralnet} is an example of a fully \emph{linear}
+architecture as it only consists of matrix multiplication. The terms
+\emph{linear}, \emph{dense} and \emph{fully-connected} are used interchangeably
+for matrix-multiplication layers. The introduction of convolutional layers and
+accompanying pooling operations made neural networks significantly more powerful
+while also reducing the computational power and making training larger models
+possible. The convolutional layer (\cref{fig:conv-layer}) is inspired by the
+human visual system acting on natural images and thus has a two- or
+three-dimensional domain as opposed to the one-dimensional one for linear
+layers. It consists of one or more rectangular (usually square) filter kernels
+which slide over the input array and compute the dot product between the kernel
+and the data at each position. Each pixel in the output feature map is thus
+computed from a rectangular area of the input. The intuition is that learned
+filter matrices will correspond to visual features in the input, e.g. lines or
+corners and higher layers combine these feature detectors into more and more
+abstract features. The filter matrix can be a three-dimensional tensor, in which
+case it also sums over all input channels (for instance colour channels in
+natural images).  The number of different filter kernels used determines the
+number channels in the layer's output.
+
+\begin{figure}
+    \centering
+    \includegraphics[max width=.7\textwidth]{gfx/diagrams/neural_network/convolution.pdf}
+    \caption[Illustration of a $3x3/1$ convolution.]{Illustration of a $3x3/1$
+        convolution ($k=3$). The layer depicted here operates on single-channel inputs and
+    outputs single channels. Since only values at those positions $(x,y)$ can be calculated
+    for which the kernel overlaps the image completely, border pixels need special treatment
+    like omission or padding.}
+    \label{fig:conv-layer}
+\end{figure}
+
+Convolutional layers can be conceptualised as fully-connected ones where many
+weights are zero (all weights between an output pixel and all pixels outside of
+its rectangular input region) and all output units share their weights (since
+they all use the same filter kernel). This makes convolutional layers with large
+output sizes possible since the number of weights is merely the product of the
+kernel dimensions, not the product of input pixels and output pixels.
+
+In addition to linear and convolutional layers, modern architectures use the
+following basic building blocks:
+\begin{itemize}
+    \item Spatial pooling operations for subsampling (taking maximum, minimum, or average over a region)
+    \item Dropout layers which randomly zero out a subset of activations in the
+        previous layer
+    \item Batch normalisation which normalises layer outputs by dividing by the
+        batch variance after subtracting the batch mean
+\end{itemize}
+
+Many variations and augmentations of these building blocks are subject of the
+literature, but have no bearing on the experiments performed for this work.
 
 \section{Stochastic Gradient Descent}%
 \label{sec:review_stochastic_gradient_descent}
@@ -201,7 +251,7 @@ The objective of this work is twofold:
         Perform experiments on common datasets to investigate whether common
         problems in neural network training can be detected on-line by the use of
         appropriate metrics. In other words, the library shall be used to
-        verify or falsify that training dynamics can be analyzed during
+        verify or falsify that training dynamics can be analysed during
         training. Issues which could be investigated include, but are
         not limited to
         \begin{itemize}
@@ -340,10 +390,10 @@ metric tracking which we will briefly survey in this section.
 \subsection*{PyTorch Ignite}\label{ignite}}
 
 The project perhaps closest to \texttt{ikkuna}\footnote{The name of the library
-developed for this thesis is the finnish word for \emph{window} as it permits
+developed for this thesis is the Finnish word for \emph{window} as it permits
 insights into the training process from the outside.} in spirit is PyTorch's
 \texttt{ignite} subproject\footnote{\url{https://pytorch.org/ignite/}}. It
-defines abstractions for simplifing the setup of the training loop and for
+defines abstractions for simplifying the setup of the training loop and for
 automatically computing metrics when events happen. It also encapsulates metrics
 into separate classes so they can be used on any model.  \texttt{ignite} per
 default only includes events for beginning and end of iterations or epochs, but
@@ -365,7 +415,7 @@ defined.
 \hypertarget{tensorboard}{%
 \subsection*{TensorBoard}\label{tensorboard}}
 
-TensorBoard is a visulisation toolkit originally developed for the TensorFlow
+TensorBoard is a visualisation toolkit originally developed for the TensorFlow
 \citep{tensorflow2015-whitepaper} deep learning framework. It is composed of a
 Python library for exporting data from the training process and a web server
 which reads the serialised data and displays it in the browser. The server can
@@ -379,7 +429,7 @@ asynchronously to disk. This data can then be displayed in approximately
 real-time in the web browser. Besides scalar-valued functions, which
 could be e.g.~the loss curve or accuracy measure, TensorBoard supports
 histograms, audio, and embedding data natively. However, concrete
-instances of these classes of training artifact must be defined by the
+instances of these classes of training artefact must be defined by the
 user and can only be reused if the developer creates a separate library
 for the computations involved. TensorBoard or TensorFlow also have no built-in
 way of intelligently discovering the model structure to automatically add
@@ -400,8 +450,8 @@ but operates at a lower level of abstraction.
 \hypertarget{visdom}{%
 \subsection*{Visdom}\label{visdom}}
 
-Visdom by Facebook Research fulfills more or less the same purpose as
-TensorBoard, but supports Numpy and Lua Torch. In contrast to
+Visdom by Facebook Research fulfil is more or less the same purpose as
+TensorBoard, but supports NumPy and Lua Torch. In contrast to
 TensorBoard, Visdom includes more features for organising the display of
 many visualisations at once. Still, the framework is mostly geared
 towards improving workflows for data scientists, and is not concerned
