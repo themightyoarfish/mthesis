@@ -1,10 +1,30 @@
-\chapter{Conclusion}%
-
 \chapter{Future Work}%
 \label{cha:future_work}
 
-This chapter will examine some avenues of inquiry which for several reasons are
-beyond the scope of this work.
+This chapter will examine some avenues of inquiry which were beyond the scope of
+this work and scope out future work needed to solidify the findings from
+\cref{ch:experiments}.
+
+\section{Extensions To The Experiments}
+
+The \texttt{ikkuna} library was employed in \cref{sec:experiments} to simplify
+experimenting with metrics on a variety of architectures, but those were mostly
+not state-of-the-art models. To validate all findings, larger and more modern
+architectures should be tested, alongside a larger variety of hpyerparameters,
+for instance a larger range of learning rates and batch sizes, since they can
+have a strong influence on the gradient distribution and thus the learning
+process.
+
+The experiments on learning rate optimisation (\cref{sec:I}) showed that a
+static target ratio between updates and weights may not be the best approach.
+Therefore, the experiments should be extended with an exploration of whether a
+moving target ratio leads to faster convergence, before the idea is entirely
+abandoned.
+
+For the convergence experiment in \cref{sec:detecting_layer_saturation}, an
+extensive search for the best threshold for freezing layers should be conducted
+in order to optimise the tradeoff between compute time invested for computing
+the metric and compute time saved by terminating training early.
 
 \section{Tracking Second-Order Information}%
 \label{sec:tracking_second_order_information}
@@ -126,7 +146,7 @@ versions.
         is generally waiting while the GPU is working, besides loading and
         decoding training data---which again involves waiting on the hard disk.
     \item The API for now is purely callback-based---a result of the PyTorch
-        API. Howerver, for some usecases---notably computing validation
+        API. However, for some use cases---notably computing validation
         accuracy and the SVCCA measure, which require the Subscriber to initiate
         forward passes---it is desirable to obtain activations or gradients as
         a return value of the forward pass, and not having to wait for the
