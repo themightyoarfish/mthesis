@@ -10,7 +10,7 @@ this work and scope out future work needed to solidify the findings from
 The \texttt{ikkuna} library was employed in \cref{ch:experiments} to simplify
 experimenting with metrics on a variety of architectures, but those were mostly
 not state-of-the-art models. To validate all findings, larger and more modern
-architectures should be tested, alongside a larger variety of hpyerparameters,
+architectures should be tested, alongside a larger variety of hyperparameters,
 for instance a larger range of learning rates and batch sizes, since they can
 have a strong influence on the gradient distribution and thus the learning
 process.
@@ -81,14 +81,14 @@ estimate is stochastic since it used a fixed number of batches from the dataset
 instead of all samples.
 
 The functionality is realised in the \code{HessianEigenSubscriber} in the
-\code{ikkuna. export.subscriber} subpackge. Eigenvalues and eigenvectors could
+\code{ikkuna.export.subscriber} subpackge. Eigenvalues and eigenvectors could
 be used for directing the gradient descent process (\citet{alain2018negative}
 tentatively find that largest decreases of the loss can often be made when
 stepping along the most negative eigendirection, i.e. the most negative
 curvature), but this would be an active intervention into the training, which is
 not the goal of the library. More practically however, the Hessian eigenvalues
 carry information about the sharpness of a local minimum and could be used for
-diagnosing stability of the current mimiser, which is relevant both for
+diagnosing stability of the current minimiser, which is relevant both for
 generalisation ability and resilience against adversarial attacks (inputs
 crafted to fool the network). There has been some recent work arguing for
 smaller batch sizes---one of the parameters whose choice we want to simplify
@@ -156,7 +156,7 @@ versions.
     \item A related problem is that some subscribers need direct access to the
         model to push data through it. This is undesirable as it couples
         Subscriber and Publisher. A service accepting data and returning
-        intermediate activations and gradients would we a good complement to the
+        intermediate activations and gradients would be a good complement to the
         callback-based API.
     \item The relationship between the \texttt{Subscriber} and
         \texttt{Subscription} classes is convoluted at present and can probably
