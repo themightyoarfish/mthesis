@@ -7,7 +7,7 @@ this work and scope out future work needed to solidify the findings from
 
 \section{Extensions To The Experiments}
 
-The \texttt{ikkuna} library was employed in \cref{sec:experiments} to simplify
+The \texttt{ikkuna} library was employed in \cref{ch:experiments} to simplify
 experimenting with metrics on a variety of architectures, but those were mostly
 not state-of-the-art models. To validate all findings, larger and more modern
 architectures should be tested, alongside a larger variety of hpyerparameters,
@@ -15,11 +15,11 @@ for instance a larger range of learning rates and batch sizes, since they can
 have a strong influence on the gradient distribution and thus the learning
 process.
 
-The experiments on learning rate optimisation (\cref{sec:I}) showed that a
-static target ratio between updates and weights may not be the best approach.
-Therefore, the experiments should be extended with an exploration of whether a
-moving target ratio leads to faster convergence, before the idea is entirely
-abandoned.
+The experiments on learning rate optimisation
+(\cref{sec:detecting_learning_rate_problems}) showed that a static target ratio
+between updates and weights may not be the best approach.  Therefore, the
+experiments should be extended with an exploration of whether a moving target
+ratio leads to faster convergence, before the idea is entirely abandoned.
 
 For the convergence experiment in \cref{sec:detecting_layer_saturation}, an
 extensive search for the best threshold for freezing layers should be conducted

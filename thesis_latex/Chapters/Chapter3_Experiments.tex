@@ -58,7 +58,7 @@ storage in \texttt{sacred}, while it is easy to provide through TensorBoard or
 Matplotlib. Therefore, this backend is left for future work and a Subscriber is
 used instead for this limited set of experiments.
 
-\begin{lstlisting}[label={lst:logging.sub},
+\begin{lstlisting}[label={lst:logging-sub},
 caption={Subscriber for logging metrics}]
 class SacredLoggingSubscriber(Subscriber):
   '''Subscriber which logs its subscribed values with sacred's metrics API'''
@@ -427,7 +427,7 @@ We will now turn to a qualitative and quantitative evaluation of how Adam
 performs on fully-connected and convolutional architectures and whether it
 actually tunes the learning rate like \citet{kingma2014adam} suggest.
 
-\Cref{fig:adammodel} shows the evolution of Adam's terms and the effective
+\Cref{fig:adammodel-adam} shows the evolution of Adam's terms and the effective
 learning rate for different base learning rates. We can see that, surprisingly,
 Adam appears very sensitive to the base learning rate, despite the fact that it
 is supposed to automatically tune it. It is curious that Adam performs best with
@@ -473,15 +473,14 @@ that the running gradient variance could play a role in such a metric.
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.01$}
-        \label{fig:adammodel-3}
     \end{subfigure}
-    \label{fig:adammodel}
+    \label{fig:adammodel-adam}
 \end{figure}
 
 If we consider the SGD algorithm instead (\cref{fig:adammodel-sgd}), we can see
 however, that the variance estimate does not vanish in any of the cases, but
 instead approaches its asymptote more quickly with increasing learning rate.
-This paired with the insights from \cref{fig:adammodel} hints at the importance
+This paired with the insights from \cref{fig:adammodel-adam} hints at the importance
 of increasing gradient variances in some fashion througout training. Possibly,
 an increase in variance is correlated with layers becoming more differentiated
 and sensitive to more patterns and is thus indicative of learning progress.
@@ -508,7 +507,6 @@ should counteract any variance increase---invalidates this hypothesis.
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.01$, optimised with SGD}
-        \label{fig:adammodel-3}
     \end{subfigure}
     \label{fig:adammodel-sgd}
     \caption[Adam moments with SGD]{Adam moments with SGD. The effective learning rate is not used, but
@@ -570,7 +568,7 @@ We omit here the results for the fully connected model trained with SGD (because
 it learns only for the largest learning rate), as well as the larger VGG16
 convolutional architecture trained with both optimisers, since the latter
 appears to be invariant to any change and may simply be too powerful to exhibit
-large differences. See \cref{ch:appendixC} for these experiments.
+large differences.
 
 \subsection{Summary}
 
@@ -1061,7 +1059,7 @@ gradients, and possibly overcorrects the learning rate.
 \subsubsection{Other Architectures}
 
 Several analyses were conducted on the data, but not displayed here due to
-inconclusive results. \textcolor{red}{Put plots into appendix to beef up thesis!}
+inconclusive results.
 The experiments were run on the AlexNetMini architecture as well, without
 results, as the network does not converge within $75$ epochs.
 The same experiment on the ResNet18 architecture exhibited the same qualitative
@@ -1612,7 +1610,7 @@ architecture (\cref{fig:alexnetmini}) as well as the larger VGG model
 beginning of each epoch. We select high learning rates has have been found
 appropriate for standard gradient descent. The different learning rates are
 split among \cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.01$),
-\cref{fig:saturation_alexnet_vgg_sgd_001_similarity} ($\eta = 0.1$) and
+\cref{fig:saturation_alexnet_vgg_sgd_01_similarity} ($\eta = 0.1$) and
 \cref{fig:saturation_alexnet_vgg_sgd_05_similarity} ($\eta = 0.5$). All graphs are averages
 of several runs, noted in parantheses in the legend. For thresholds on the
 self-similarity score we use $0.99$, $0.995$ and also report control runs
@@ -1681,7 +1679,7 @@ $50.000$ training (one epoch) examples are enough to learn these filters.
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/saturation/acc_sim_alexnetmini_vgg_sgd_01.pdf}
         \caption{Accuracy and self-similarity for learning rate $0.1$}
-        \label{fig:saturation_alexnet_vgg_sgd_001_similarity}
+        \label{fig:saturation_alexnet_vgg_sgd_01_similarity}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
