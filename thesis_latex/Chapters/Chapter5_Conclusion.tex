@@ -7,10 +7,27 @@ final accuracies after the fact could yield immense savings in computation and
 cost.  Furthermore, finding metrics which predict undesirable network behaviour
 can be instrumental in guiding research of the theoretical mechanisms underlying
 the sometimes remarkable performance of neural models, which to this day remain
-poorly understood. Candidate metrics for optimising the learning rate and
+poorly understood.
+
+After introducinng the concepts of artificial neural networks and their
+optimisation, a software library named \texttt{ikkuna} has been designed and
+implemented for the PyTorch deep learning framework.  The library frees the
+researcher or practitioner from some of the repetitive tasks necessary for
+experimenting with and applying online metrics.  It provides a model-agnostic
+API based on a Publisher-Subscriber pattern against which portable and reusable
+network metrics can be implemented. These metrics can be distributed as plugins
+and thus shared with the community. The library can also be a building block in
+more comprehensive deep learning applications and libraries, such as the
+web-based Peltarion platform, thus saving engineering effort.
+
+Following that, the library was employed for its intended use: Aiding
+researchers and machine learning practitioners in implementing and evaluating
+online training metrics.  Candidate metrics for optimising the learning rate and
 detecting network convergence have been introduced and evaluated. In doing so,
-deep learning folklore and research in the context of learning rates has been
-partially debunked and partially validated.
+deep learning folklore and research in the context of learning rates and
+parameter optimisation has been partially debunked and partially validated.
+Finally, some avenues for further research have been introduced which would
+build upon this work.
 
 While more work remains to be done to scope out the validity of the findings
 presented here (a task which is simplified by the software presented here),
@@ -18,13 +35,3 @@ promising results were obtained for detecting layer convergence, whereas the
 proposed learning rate metric could not be confirmed to be of immediate use.
 Nonetheless, some evidence was presented for its potential pending further
 investigation.
-
-A software library has been designed and implemented for the PyTorch deep
-learning framework that frees the researcher or practitioner from some of the
-repetitive tasks necessary for experimenting with and applying online metrics.
-It provides a model-agnostic API based on a Publisher-Subscriber pattern against
-which portable and reusable network metrics can be implemented. These metrics
-can be distributed as plugins and thus shared with the community. The library
-can also be a building block in more comprehensive deep learning applications
-and libraries, such as the web-based Peltarion platform, thus saving engineering
-effort.
