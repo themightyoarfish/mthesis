@@ -20,25 +20,26 @@ choosing a parameterisation remains trial-and-error, or only somewhat more
 sophisticated ways to run and test.  The computational cost of training large
 models prohibits quick experimentation and often translates into monetary costs
 as well.  Identifying dead ends early or points in training at which to tweak
-certain parameters could thus provide large savings in time and money, besides
+certain hyperparameters could thus provide large savings in time and money, besides
 enabling a more thorough understanding of what is going on inside the pile of
 linear algebra that is a deep learning model.
 
 This thesis addresses the above in two ways: A software library aiding in deep
 learning debugging and experimentation is designed, implemented and documented. The same
 library is then used to investigate experimentally whether heretofore unexplored
-metrics can be devised for optimising parameters of the training process while it is running.
+metrics can be devised for optimising hyperparameters of the training process while it is running.
 
-This thesis is concerned with \emph{deep} neural networks, meaning
-architectures consisting of many layers. Typically, the number of units
-in such a model and thus the number of tunable parameters
-(\(n_{weights\_per\_neuron} \times n_{neurons}\)) exceeds the number of
-training examples. Training such large networks thus involves iterating
-over the dataset many times which incurs a high computational cost due
-to the massive number of matrix operations involved. Speeding up the
-training is thus one of the primary endeavours in deep learning
-research. An overview of the workings of a neural network is given in
-the next (\cref{sec:anns}).
+This thesis is concerned with \emph{deep} neural networks, meaning architectures
+consisting of many layers. Typically, the number of units in such a model and
+thus the number of tunable parameters\footnote{\emph{Parameters} usually refer
+to the network weights, while \emph{hyperparameters} are the configuration of
+the model and the training process.} is on the order of
+$\mathcal{O}(n_{weights\_per\_neuron} \times n_{neurons})$ and exceeds the number of
+training examples. Training such large networks thus involves iterating over the
+dataset many times which incurs a high computational cost due to the massive
+number of matrix operations involved. Speeding up the training is thus one of
+the primary endeavours in deep learning research. An overview of the workings of
+a neural network is given in the next (\cref{sec:anns}).
 
 \hypertarget{sec:anns}{%
 \section{Artificial Neural Networks}\label{sec:anns}}
@@ -129,9 +130,9 @@ problems.
     \centering
     \includegraphics[max width=\textwidth]{gfx/diagrams/neural_network/neural_net.pdf}
     \caption[Schema of a multi-layer neural network]{Schema of a multi-layer neural network. \(\mathbf{x}_i\) are
-        the input values, \(a_{l_n,i}\) the \(i\)-th activation in layer \(l_n\)
-        and \(w_{l_n,i,j}\) the weight between the \(i\)-th unit in layer
-    \(l_n\) and the \(j\)-th unit in layer \(l_{n+1}\)}
+        the input values, \(a_{l,i}\) the \(i\)-th activation in layer \(l\)
+        and \(w_{l,i,j}\) the weight between the \(i\)-th unit in layer
+    \(l\) and the \(j\)-th unit in layer \(l+1\)}
     \label{fig:neuralnet}
 \end{figure}
 
@@ -206,24 +207,25 @@ parameters. It is stochastic as it only uses a subset of the training data
 (called \emph{batch}) at every time step and thus only approximates the true
 gradient which would have to be computed over the entire dataset to be learned.
 
-In standard stochastic gradient descent, a loss $J$ of some the
+In standard stochastic gradient descent, a loss estimate $\widehat{J}$ of some the
 model parameters $\boldsymbol\theta$ (here, the layer weights) is computed over the training set of $m$
 examples by forming the expectation over the sample loss $L$:
 
 \begin{align}
-    J(\boldsymbol\theta) &= \mathbb{E}_{\mathbf{x},y\sim\hat{p}_{\text{data}}} L(\mathbf{x}, y, \boldsymbol\theta) \\
-                         &= \frac{1}{m}\sum_{i=1}^{m}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
+J(\boldsymbol\theta) &= \mathbb{E}_{\mathbf{x},y\sim\hat{p}_{\text{data}}} L(\mathbf{x}, y, \boldsymbol\theta) \\
+\widehat{J}(\boldsymbol\theta)                         &= \frac{1}{m}\sum_{i=1}^{m}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
 \end{align}
 The cumulative loss can then be derived for $\boldsymbol\theta$
 
 \begin{align}
-    \nabla_{\boldsymbol\theta}J &= \frac{1}{m}\sum_{i=1}^{m}\nabla_{\boldsymbol\theta}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
+\nabla_{\boldsymbol\theta}\widehat{J} &= \frac{1}{m}\sum_{i=1}^{m}\nabla_{\boldsymbol\theta}L(x^{(i)}, y^{(i)}, \boldsymbol\theta)
 \end{align}
 per the sum rule of differentiation. The simplest form of parameter update rule
 is then
 
 \begin{align}
-    \boldsymbol\theta &\leftarrow \boldsymbol\theta - \eta \nabla_{\boldsymbol\theta}J
+    \boldsymbol\theta &\leftarrow \boldsymbol\theta - \eta
+\nabla_{\boldsymbol\theta}\widehat{J}
 \end{align}
 with the learning rate $\eta$. There is no hard and fast rule on what this
 parameter should be, and it is subject of large swathes of literature. Popular
@@ -303,6 +305,8 @@ factoring in the fact that some parameters can change over time, such as
 Other parameters that need to be set initially are
 
 \begin{itemize}
+    \item
+        Weight initialisation
     \item
         network architecture (how many layers, how many units per layer,
         what kind of layers)
