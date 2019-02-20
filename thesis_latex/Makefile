@@ -1,6 +1,6 @@
 MAIN_FILE=Thesis
 TEX_SOURCES=$(MAIN_FILE).tex Chapters/*.tex classicthesis-config.tex FrontBackMatter/*.tex Bibliography.bib
-TEX_CMD="latexmk -pdf"
+TEX_CMD=latexmk -pdf
 all: $(MAIN_FILE).pdf
 
 $(MAIN_FILE).pdf: $(TEX_SOURCES) FrontBackMatter/Titlepage.pdf
@@ -10,7 +10,9 @@ $(MAIN_FILE).pdf: $(TEX_SOURCES) FrontBackMatter/Titlepage.pdf
 FrontBackMatter/Titlepage.pdf: FrontBackMatter/Titlepage.tex gfx/uni.pdf
 	cd FrontBackMatter; $(TEX_CMD) Titlepage.tex; cd ..;
 
-watch:
+titlepage: FrontBackMatter/Titlepage.pdf
+
+watch: FrontBackMatter/Titlepage.pdf
 	latexmk -pdf -pvc $(MAIN_FILE).tex
 
 clean:
