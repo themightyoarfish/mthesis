@@ -60,9 +60,9 @@ that time, more easily trainable models like Support Vector machines eclipsed
 neural nets for most applications, but with the introduction of the
 backpropagation algorithm \citep{werbos1975beyond} and increasing availability
 of computing power, this began to change.  Architectural advances, such as the
-convolutional neural networks in the late 1980s (\citep{lecun1989generalization,
-LeCun:1989:BAH:1351079.1351090}) and the advent of GPU-accelerated neural
-network implementations (pioneered in \cite{Ciresan11flexible})---as well as
+convolutional neural networks in the late 1980s \citep{lecun1989generalization,
+LeCun:1989:BAH:1351079.1351090} and the advent of GPU-accelerated neural
+network implementations (pioneered by\cite{Ciresan11flexible})---as well as
 subsequently, GPU-accelerated linear algebra libraries with automatic
 differentiation---finally made neural networks the workhorse for many AI
 applications today.
@@ -77,7 +77,7 @@ propagating the resulting activations through subsequent layers in the
 same fashion. \Cref{fig:neuralnet} gives a graphical representation of a
 multi-layer feedforward network, the simplest form of neural network.
 Mathematically, such a model corresponds to a set of weight matrices
-$\mathcal{W} = \{W_i \mid W \in \mathbf{R}^{n_{i-1} \times n_i}\}$ where $n_i$
+$\mathcal{W} = \{W_i \mid W_i \in \mathbf{R}^{n_{i-1} \times n_i}\}$ where $n_i$
 is the number of units in layer $i$. Each layer can have an associated bias
 vector that is added to the output. The computation performed by layer $i$ on
 the previous layer's output is
@@ -152,17 +152,17 @@ accompanying pooling operations made neural networks significantly more powerful
 while also reducing the computational power and making training larger models
 possible. The convolutional layer (\cref{fig:conv-layer}) is inspired by the
 human visual system acting on natural images and thus has a two- or
-three-dimensional domain as opposed to the one-dimensional one for linear
-layers. It consists of one or more rectangular (usually square) filter kernels
-which slide over the input array and compute the dot product between the kernel
-and the data at each position. Each pixel in the output feature map is thus
-computed from a rectangular area of the input. The intuition is that learned
-filter matrices will correspond to visual features in the input, e.g. lines or
-corners and higher layers combine these feature detectors into more and more
-abstract features. The filter matrix can be a three-dimensional tensor, in which
-case it also sums over all input channels (for instance colour channels in
-natural images).  The number of different filter kernels used determines the
-number channels in the layer's output.
+three-dimensional domain as opposed to the one-dimensional one for linear layers
+(their input is simply a vector of values). It consists of one or more
+rectangular (usually square) filter kernels which slide over the input array and
+compute the dot product between the kernel and the data at each position. Each
+pixel in the output feature map is thus computed from a rectangular area of the
+input. The intuition is that learned filter matrices will correspond to visual
+features in the input, e.g. lines or corners and higher layers combine these
+feature detectors into more and more abstract features. The filter matrix can be
+a three-dimensional tensor, in which case it also sums over all input channels
+(for instance colour channels in natural images).  The number of different
+filter kernels used determines the number channels in the layer's output.
 
 \begin{figure}
     \centering
@@ -230,7 +230,7 @@ is then
 with the learning rate $\eta$. There is no hard and fast rule on what this
 parameter should be, and it is subject of large swathes of literature. Popular
 modifications to the vanilla update rule are the use of momentum
-\citep{jacobs1988increased}, per-layer learning rates (ibd.), reducing the rate
+\citep{jacobs1988increased}, per-layer learning rates (ibid.), reducing the rate
 throughout training, or adapting the
 learning rate based on mean and variance of gradients across past time steps
 \citep{kingma2014adam}. Nevertheless, most of the time, training begins with an
