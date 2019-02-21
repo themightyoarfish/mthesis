@@ -374,17 +374,18 @@ training time. Our reproduction with the exact same parameters  is shown in
 \cref{fig:adam-repro}.
 
 \begin{figure}
+    \caption{Adam convolutional architecture with learning rate $0.001$}
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_1200.pdf}
-        \caption{Adam convnet with learning rate $0.001$, first three epochs}
+        \caption{First three epochs}
         \label{fig:adam-repro-1}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
         \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
-        \caption{Adam convnet with learning rate $0.001$, entire training}
+        \caption{Entire training}
         \label{fig:adam-repro-2}
     \end{subfigure}
     \label{fig:adam-repro}
@@ -459,19 +460,19 @@ that the running gradient variance could play a role in such a metric.
     Adam optimiser}
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_00005_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.0005$}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_0001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.001$}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_adam_001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.01$}
     \end{subfigure}
     \label{fig:adammodel-adam}
@@ -493,19 +494,19 @@ should counteract any variance increase---invalidates this hypothesis.
     SGD optimiser}
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_00005_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.0005$, optimised with SGD}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_0001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_0001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.001$, optimised with SGD}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/adammodel_sgd_001_0_-1.pdf}
         \caption{Adam convnet with learning rate $0.01$, optimised with SGD}
     \end{subfigure}
     \label{fig:adammodel-sgd}
@@ -535,19 +536,19 @@ learning at all.
     Adam optimiser}
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_00005_0_-1.pdf}
         \caption{Dense model with learning rate $0.0005$, optimised with Adam}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_0001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_0001_0_-1.pdf}
         \caption{Dense model with learning rate $0.001$, optimised with Adam}
     \end{subfigure}
 
     \begin{subfigure}{\textwidth}
         \centering
-        \includegraphics[width=\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_001_0_-1.pdf}
+        \includegraphics[width=0.9\linewidth]{gfx/diagrams/experiments/adam/fullyconnectedmodel_adam_001_0_-1.pdf}
         \caption{Dense model with learning rate $0.01$, optimised with Adam}
     \end{subfigure}
     \label{fig:fully-connected-experiment}
@@ -641,7 +642,7 @@ activation functions.  Other nonlinearites such as the rectified linear unit do
 not exhibit the same behaviour, but that does not mean all layers must change at
 the same rate.
 
-\begin{figure}[h]
+\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{gfx/diagrams/experiments/ratio_loss_correlation/alexnetmini_sgd_fixed_ratio_01.pdf}
     \caption[Fixed-Ratio optimisation with AlexNetMini on CIFR10]{AlexNetMini on CIFAR10 at $0.1$ learning rate. The blue line is
@@ -656,7 +657,7 @@ rate in such a way as to hit the target postulated by
 over all layers. This would allow for more flexibility in the weight updates
 compared to fixing each update to the same value.
 
-\begin{table}[h]
+\begin{table}
     \centering
     \caption{Hyperparameters for the fixed-ratio experiment}
     \label{tbl:params-fixed-ratio}
@@ -1059,7 +1060,8 @@ gradients, and possibly overcorrects the learning rate.
 \subsubsection{Other Architectures}
 
 Several analyses were conducted on the data, but not displayed here due to
-inconclusive results.
+inconclusive results.\footnote{The data can be plotted with the code and database
+accompanying this thesis.}
 The experiments were run on the AlexNetMini architecture as well, without
 results, as the network does not converge within $75$ epochs.
 The same experiment on the ResNet18 architecture exhibited the same qualitative
@@ -1077,7 +1079,7 @@ can only decrease significantly if the weights change accordingly (unless the
 loss surface is extremely rough), we find no particular insights as to what
 ratio is appropriate for any given point in training.
 
-\subsubsection{Fixing The Learning Rate for Karpathy's Constant}
+\subsection{Fixing The Learning Rate for Karpathy's Constant}
 
 We now want to check how the UW ratio relates to the loss when we attempt to
 artificially fix the ratio value to a target of $0.001$. Since the updates to the
@@ -1093,8 +1095,8 @@ one of two ways:
 Using the ratio-adaptive schedule results in the behaviour shown in
 \cref{fig:ratio_loss_corr_vgg_sgd_0001_adaptive,fig:ratio_loss_corr_vgg_sgd_001_adaptive,fig:ratio_loss_corr_vgg_sgd_01_adaptive}.
 In contrast to previous experiments, we also have a configuration with $0.001$
-learning rate, dropping the $0.05$ value. We also plot the learning rate caused
-by the scheduling over the UW ratio.
+learning rate, dropping the $0.05$ value. We also plot the learning rate
+computed on the UW ratio.
 
 Note that for this set of plots, the axis limits are different. This serves to
 illustrate that the qualitative behaviour is identical for all learning rates
