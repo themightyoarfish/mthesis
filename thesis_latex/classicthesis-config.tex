@@ -1,3 +1,13 @@
+\usepackage{ifthen}
+\newboolean{printout}
+\setboolean{printout}{true}
+
+\ifthenelse{\boolean{printout}}
+{
+   \PassOptionsToPackage{draft=true}{hyperref}
+}{
+   \PassOptionsToPackage{draft=false}{hyperref}
+}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Custom adjustments %%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
