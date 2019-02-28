@@ -1,6 +1,6 @@
 \usepackage{ifthen}
 \newboolean{printout}
-\setboolean{printout}{true}
+\setboolean{printout}{false}
 
 \ifthenelse{\boolean{printout}}
 {
@@ -193,7 +193,11 @@
 % Custom colour definitions
 \definecolor{verylightblue}{RGB}{243, 243, 250}
 \definecolor{verydarkblue}{RGB}{37, 65, 103}
+\definecolor{bluegray}{HTML}{707788}
+\definecolor{winered}{HTML}{995F6C}
 \definecolor{reddish}{RGB}{238, 86, 121}
+\definecolor{reddish1}{HTML}{C55692}
+\definecolor{reddish2}{HTML}{605A90}
 \definecolor{yellowish}{RGB}{217, 216, 116}
 \definecolor{mediumlightblue}{RGB}{157, 176, 191}
 
@@ -276,10 +280,10 @@
     deletekeywords={sum},
     captionpos=b,
     basicstyle=\footnotesize\ttfamily,
-    keywordstyle=\color{reddish},%\bfseries,
+    keywordstyle=\color{reddish}\bfseries,
     % identifierstyle=\color{NavyBlue},
-    commentstyle=\color{mediumlightblue},
-    stringstyle=\color{verydarkblue},
+    commentstyle=\color{bluegray},
+    stringstyle=\color{reddish2},
     numbers=none,%left,%
     numberstyle=\scriptsize,%\tiny
     stepnumber=5,
